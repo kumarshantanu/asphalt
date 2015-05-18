@@ -1,4 +1,4 @@
-(defproject net.sf.bitumen/asphalt "0.1.0-SNAPSHOT"
+(defproject asphalt "0.1.0-SNAPSHOT"
   :description "A Clojure library for JDBC access"
   :url "https://github.com/kumarshantanu/asphalt"
   :license {:name "Eclipse Public License"
