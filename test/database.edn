@@ -1,0 +1,12 @@
+{:adapter  :h2
+ :target   :memory
+ :database "test"
+ :username "sa"
+ :password ""
+ :create-ddl "CREATE TABLE emp (
+    id     INT PRIMARY KEY AUTO_INCREMENT,
+    name   VARCHAR(50) NOT NULL,
+    salary INT NOT NULL,
+    dept   VARCHAR(50)
+)"
+ :drop-ddl "DROP TABLE emp"}
