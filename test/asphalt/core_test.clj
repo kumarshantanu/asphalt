@@ -47,14 +47,14 @@
                (a/query a/fetch-single-value sql-count [] conn))) "Verify that row was inserted")
     ;; retrieve
     (is (= vs1
-          (a/with-connection [conn u/ds]
-            (a/query a/fetch-single-row sql-select [] conn))))
+          (vec (a/with-connection [conn u/ds]
+                 (a/query a/fetch-single-row sql-select [] conn)))))
     ;; update
     (a/with-connection [conn u/ds]
       (a/update sql-update upa conn))
     (is (= vs2
-          (a/with-connection [conn u/ds]
-            (a/query a/fetch-single-row sql-select [] conn))))
+          (vec (a/with-connection [conn u/ds]
+                 (a/query a/fetch-single-row sql-select [] conn)))))
     ;; delete
     (a/with-connection [conn u/ds]
       (a/update sql-delete [] conn))
@@ -73,4 +73,4 @@
                 (a/query a/fetch-single-value sql-count [] conn))) "Verify that all rows were inserted")
     (doseq [each (a/with-connection [conn u/ds]
                    (a/query a/fetch-rows sql-select [] conn))]
-      (is (= each vs1)))))
+      (is (= (vec each) vs1)))))

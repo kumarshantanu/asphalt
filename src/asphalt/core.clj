@@ -272,7 +272,7 @@
     (fetch-rows i/read-result-row nil result-set))
   ([result-column-types ^ResultSet result-set]
     (fetch-rows i/read-result-row result-column-types result-set))
-  ([row-maker result-column-types ^ResultSet result-set]
+  ([row-maker ^ints result-column-types ^ResultSet result-set]
     (let [rows (transient [])]
       (if (seq result-column-types)
         (while (.next result-set)
@@ -291,7 +291,7 @@
     (fetch-single-row i/read-result-row nil result-set))
   ([result-column-types ^ResultSet result-set]
     (fetch-single-row i/read-result-row result-column-types result-set))
-  ([row-maker result-column-types ^ResultSet result-set]
+  ([row-maker ^ints result-column-types ^ResultSet result-set]
     (if (.next result-set)
       (let [row (if (seq result-column-types)
                   (row-maker result-set result-column-types)
