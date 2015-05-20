@@ -25,11 +25,11 @@
 
 (a/defsql sql-count  "SELECT COUNT(*) FROM emp")
 
-(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES (?name~string, ?salary~int, ?dept~string)")
+(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name^string, $salary^int, $dept^string)")
 
-(a/defsql sql-select "SELECT name~string, salary~int, dept~string FROM emp")
+(a/defsql sql-select "SELECT name^string, salary^int, dept^string FROM emp")
 
-(a/defsql sql-update "UPDATE emp SET salary = ?new-salary~int WHERE dept = ?dept~string")
+(a/defsql sql-update "UPDATE emp SET salary = $new-salary^int WHERE dept = $dept^string")
 
 (a/defsql sql-delete "DELETE FROM emp")
 
