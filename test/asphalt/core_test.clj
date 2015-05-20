@@ -38,7 +38,8 @@
         row (zipmap [:name :salary :dept] vs1)
         vs2 ["Joe Coder" 110000 "Accounts"]
         upa {:new-salary 110000
-             :dept "Accounts"}]
+             :dept "Accounts"}
+        upv [110000 "Accounts"]]
     ;; create
     (let [generated-key (a/with-connection [conn u/ds]
                           (a/genkey a/fetch-single-value sql-insert row conn))]
@@ -52,6 +53,9 @@
     ;; update
     (a/with-connection [conn u/ds]
       (a/update sql-update upa conn))
+    (testing "vanilla vector params"
+      (a/with-connection [conn u/ds]
+        (a/update sql-update upv conn)))
     (is (= vs2
           (vec (a/with-connection [conn u/ds]
                  (a/query a/fetch-single-row sql-select [] conn)))))

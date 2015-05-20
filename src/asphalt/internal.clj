@@ -249,7 +249,7 @@
         (loop [i (int 0)]
           (when (< i param-count)
             (let [j (unchecked-inc i)]
-              (set-param-value! prepared-statement j (aget param-types i) (get params i))
+              (set-param-value! prepared-statement j (second (aget param-types i)) (get params i))
               (recur j))))))))
 
 
