@@ -98,7 +98,10 @@
                    :timestamp  sql-timestamp})
 
 
-(def supported-sql-types (set (keys sql-type-map)))
+(def supported-sql-types (str "either of " (->> (keys sql-type-map)
+                                             (remove nil?)
+                                             (map name)
+                                             (str/join ", "))))
 
 
 (defrecord SQLTemplate
@@ -125,29 +128,21 @@
   ^SQLTemplate [sql param-pairs result-column-types]
   (when-not (string? sql)
     (unexpected "SQL string" sql))
-  (when-not (and (vector? param-pairs)
-              (every? vector? param-pairs)
-              (every? #(<= 1 (count %) 2) param-pairs))
-    (unexpected "param-pairs vector with 1 or 2 element vectors of param name and optional type" param-pairs))
-  (when-not (vector? result-column-types)
-    (unexpected "result-column-types vector" result-column-types))
-  (let [param-types (map second param-pairs)]
-    (when-not (every? #(contains? supported-sql-types %) param-types)
-      (unexpected (str "every param type to be one of " supported-sql-types) param-pairs)))
-  (when-not (every? #(contains? supported-sql-types %) result-column-types)
-    (unexpected (str "every result column type to be one of " supported-sql-types) result-column-types))
-  (->SQLTemplate sql
-    ;; param names and types
-    (->> param-pairs
-      (map (fn [[k t]] [k (get sql-type-map t)]))
-      object-array)
-    ;; result types
-    (->> result-column-types
-      (map sql-type-map)
-      int-array)))
+  (->SQLTemplate sql (object-array param-pairs) (int-array result-column-types)))
 
 
 ;; ----- SQL parsing helpers -----
+
+
+(def encode-name keyword)
+
+
+(defn encode-type
+  [^String token ^String sql]
+  (let [k (keyword token)]
+    (when-not (contains? sql-type-map k)
+      (unexpected (str supported-sql-types " in SQL string: " sql) token))
+    (get sql-type-map k)))
 
 
 (defn valid-type-char?
@@ -224,7 +219,7 @@
       #_sql-string     11 (.setString    prepared-statement param-index ^String param-value)
       #_sql-time       12 (.setTime      prepared-statement param-index ^java.sql.Time param-value)
       #_sql-timestamp  13 (.setTimestamp prepared-statement param-index ^java.sql.Timestamp param-value)
-      (unexpected (str "either of " (pr-str supported-sql-types)) param-type))))
+      (unexpected supported-sql-types param-type))))
 
 
 (defn set-params!
@@ -292,7 +287,7 @@
       #_sql-string     11 (.getString    result-set column-index)
       #_sql-time       12 (.getTime      result-set column-index)
       #_sql-timestamp  13 (.getTimestamp result-set column-index)
-      (unexpected (str "either of " (pr-str supported-sql-types)) column-type))))
+      (unexpected supported-sql-types column-type))))
 
 
 (defn read-result-row
