@@ -23,7 +23,7 @@
     (parse-sql sql {}))
   ([^String sql options]
     (let [{:keys [escape-char param-start-char type-start-char name-encoder]
-         :or {escape-char \\ param-start-char \$ type-start-char \^ name-encoder keyword}} options
+         :or {escape-char \\ param-start-char \$ type-start-char \^}} options
         ec escape-char       ; escape char
         mc param-start-char  ; marker char
         tc type-start-char   ; type char
@@ -80,10 +80,10 @@
           (recur (inc i) e? n? t?))))
     (i/make-sql-template
       (.toString sb)
-      (mapv #(->> (i/split-param-name-and-type type-start-char %)
-               (mapv name-encoder))
+      (mapv #(let [[p-name p-type] (i/split-param-name-and-type type-start-char %)]
+               [(i/encode-name p-name) (i/encode-type p-type sql)])
         (persistent! ks))
-      (mapv name-encoder (persistent! ts))))))
+      (mapv #(i/encode-type % sql) (persistent! ts))))))
 
 
 (defmacro defsql
