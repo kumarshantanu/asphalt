@@ -335,3 +335,14 @@
       (illegal-arg "Expected either of" (pr-str isolation-levels)
         "or an integer representing a java.sql.Connection/TRANSACTION_XXX value, but found"
         (class isolation) (pr-str isolation)))))
+
+
+;; Spring (and EJB) transaction propagation
+;; http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html
+(def propagation #{:mandatory
+                   :nested
+                   :never
+                   :not-supported
+                   :required
+                   :requires-new
+                   :supports})
