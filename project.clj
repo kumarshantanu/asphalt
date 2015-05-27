@@ -8,8 +8,11 @@
                                   [clj-dbcp "0.8.1"]
                                   [com.h2database/h2 "1.3.175"]]}
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
-             :c17 {:dependencies [[org.clojure/clojure "1.7.0-beta2"]]
-                   :global-vars {*unchecked-math* :warn-on-boxed}}}
+             :c17 {:dependencies [[org.clojure/clojure "1.7.0-RC1"]]
+                   :global-vars {*unchecked-math* :warn-on-boxed}}
+             :perf {:dependencies [[criterium "0.4.3"]
+                                   [org.clojure/java.jdbc "0.3.7"]]
+                    :test-paths ["perf"]}}
   :jvm-opts ^:replace ["-server" "-Xms2048m" "-Xmx2048m"]
   :global-vars {*warn-on-reflection* true
                 *assert* true})
