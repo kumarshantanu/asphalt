@@ -2,9 +2,14 @@
   (:require
     [clojure.test :refer :all]
     [clojure.java.jdbc :as jdbc]
-    [criterium.core    :as cri]
+    [citius.core       :as c]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]))
+
+
+(use-fixtures :once (c/make-bench-wrapper ["clojure.java.jdbc" "Asphalt"]
+                      {:chart-title "Clojure.java.jdbc vs Asphalt"
+                       :chart-filename (format "bench-clj-%s.png" c/clojure-version-str)}))
 
 
 (defn test-fixture
@@ -39,13 +44,14 @@
                :salary 100000
                :dept "Accounts"}]
      (jdbc/with-db-connection [db-con db-spec]
-       (cri/bench (do
-                    (jdbc/insert! db-con :emp data)
-                    (jdbc/delete! db-con :emp []))))
-     (a/with-connection [conn u/ds]
-       (cri/bench (do
-                    (a/update sql-insert data conn)
-                    (a/update sql-delete nil conn)))))))
+       (a/with-connection [conn u/ds]
+         (c/compare-perf "insert-delete"
+           (do
+             (jdbc/insert! db-con :emp data)
+             (jdbc/delete! db-con :emp []))
+           (do
+             (a/update sql-insert data conn)
+             (a/update sql-delete nil conn))))))))
 
 
 (deftest bench-select
@@ -55,11 +61,15 @@
                 :dept "Accounts"}]
       (a/with-connection [conn u/ds]
         (a/update sql-insert data conn))
-      ;; bench c.j.j
+      ;; bench c.j.j normal with asphalt
       (jdbc/with-db-connection [db-con db-spec]
-        (cri/bench (jdbc/query db-con [cjj-select])))
+        (a/with-connection [conn u/ds]
+          (c/compare-perf "select-row"
+            (jdbc/query db-con [cjj-select])
+            (a/query a/fetch-rows sql-select nil conn))))
+      ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
-        (cri/bench (jdbc/query db-con [cjj-select] :as-arrays? true)))
-      ;; bench asphalt
-      (a/with-connection [conn u/ds]
-        (cri/bench (a/query a/fetch-rows sql-select nil conn))))))
+        (a/with-connection [conn u/ds]
+          (c/compare-perf "select-row-as-arrays"
+            (jdbc/query db-con [cjj-select] :as-arrays? true)
+            (a/query a/fetch-rows sql-select nil conn)))))))
