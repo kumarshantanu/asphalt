@@ -3,7 +3,6 @@
   :url "https://github.com/kumarshantanu/asphalt"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies []
   :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.10"]
                                   [clj-dbcp "0.8.1"]
                                   [com.h2database/h2 "1.3.175"]]}

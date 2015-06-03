@@ -23,7 +23,7 @@
     (parse-sql sql {}))
   ([^String sql options]
     (let [{:keys [escape-char param-start-char type-start-char name-encoder]
-         :or {escape-char \\ param-start-char \$ type-start-char \^}} options
+           :or {escape-char \\ param-start-char \$ type-start-char \^}} options
         ec escape-char       ; escape char
         mc param-start-char  ; marker char
         tc type-start-char   ; type char
