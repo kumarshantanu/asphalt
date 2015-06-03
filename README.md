@@ -117,8 +117,15 @@ type-hint every column, or not specify type-hints for any column at all.
 
 ### Transactions
 
-TODO
+```clojure
+(a/with-transaction [conn data-source] :read-committed
+  (let [[id salary dept] (a/query a/fetch-single-row sql-select-with-id [] conn)
+        new-salary (compute-new-salary salary dept)]
+    (a/update sql-update {:new-salary salary :id id} conn)))
+```
 
+If the code doesn't throw any exception the transaction would be committed. On all exceptions the transaction would be
+rolled back.
 
 ## License
 

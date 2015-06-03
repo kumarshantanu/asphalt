@@ -78,3 +78,42 @@
     (doseq [each (a/with-connection [conn u/ds]
                    (a/query a/fetch-rows sql-select [] conn))]
       (is (= (vec each) vs1)))))
+
+
+(deftest test-transaction-commit
+  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+        upa {:new-salary 110000
+             :dept "Accounts"}
+        vs2 ["Harry Hacker" 90000 "R&D"]]
+    ;; insert one record
+    (a/with-connection [conn u/ds]
+      (a/genkey a/fetch-single-value sql-insert vs1 conn))
+    ;; transaction that commits
+    (a/with-transaction [conn u/ds] :read-committed
+      (a/update sql-update upa conn)
+      (a/genkey a/fetch-single-value sql-insert vs2 conn))
+    ;; verify result
+    (is (= 2 (a/with-connection [conn u/ds]
+               (a/query a/fetch-single-value sql-count [] conn))) "Verify that rows were inserted")))
+
+
+(deftest test-transaction-rollback
+  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+        upa {:new-salary 110000
+             :dept "Accounts"}
+        vs2 ["Harry Hacker" 90000 "R&D"]]
+    ;; insert one record
+    (a/with-connection [conn u/ds]
+      (a/genkey a/fetch-single-value sql-insert vs1 conn))
+    ;; transaction that commits
+    (is (thrown? IllegalStateException
+          (a/with-transaction [conn u/ds] :read-committed
+            (a/update sql-update upa conn)
+            (throw (IllegalStateException. "boom!"))
+            (a/genkey a/fetch-single-value sql-insert vs2 conn))))
+    ;; verify result
+    (is (= 1 (a/with-connection [conn u/ds]
+               (a/query a/fetch-single-value sql-count [] conn))) "Second row should not be inserted")
+    (is (= vs1
+          (vec (a/with-connection [conn u/ds]
+                 (a/query a/fetch-single-row sql-select [] conn)))) "Only original values should exist")))
