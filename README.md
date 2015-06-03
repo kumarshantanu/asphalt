@@ -127,6 +127,9 @@ type-hint every column, or not specify type-hints for any column at all.
 If the code doesn't throw any exception the transaction would be committed. On all exceptions the transaction would be
 rolled back.
 
+Supported isolation levels are: `:none`, `:read-committed`, `:read-uncommitted`, `:repeatable-read`, `:serializable`.
+
+
 ## License
 
 Copyright © 2015 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
