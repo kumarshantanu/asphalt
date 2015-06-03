@@ -87,7 +87,8 @@ With SQL-templates, you can pass param maps with keys as param names:
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/genkey a/fetch-single-value sql-insert {:name "Joe Coder" :salary 100000 :dept "Accounts"} conn))
+  (a/genkey a/fetch-single-value sql-insert
+    {:name "Joe Coder" :salary 100000 :dept "Accounts"} conn))
 (a/with-connection [conn data-source]
   (a/update sql-update {:new-salary 110000 :dept "Accounts"} conn))
 ```
@@ -98,7 +99,8 @@ The examples we saw above read and write values as objects, which means we depen
 SQL-templates let you optionally specify the types of params and also return columns in a query: 
 
 ```clojure
-(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name^string, $salary^int, $dept^string)")
+(a/defsql sql-insert
+  "INSERT INTO emp (name, salary, dept) VALUES ($name^string, $salary^int, $dept^string)")
 
 (a/defsql sql-select "SELECT name^string, salary^int, dept^string FROM emp")
 
