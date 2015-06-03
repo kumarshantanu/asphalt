@@ -166,7 +166,7 @@
               (catch Exception _)) ; ignore auto-rollback exceptions
             (throw e))))
       (i/unexpected "javax.sql.DataSource instance" data-source)))
-  ([f isolation ^DataSource data-source]
+  ([f ^DataSource data-source isolation]
     (if (instance? DataSource data-source)
       (with-open [^Connection connection (.getConnection ^DataSource data-source)]
         (.setAutoCommit connection false)
@@ -197,7 +197,7 @@
     (when-not (symbol? connection)
       (i/unexpected "a symbol" connection))
     `(invoke-with-transaction
-       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~isolation ~data-source)))
+       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~data-source ~isolation)))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----
