@@ -80,6 +80,31 @@
       (is (= (vec each) vs1)))))
 
 
+(a/defsql sql-batch-update "UPDATE emp SET salary = $new-salary WHERE id = $id")
+
+
+(deftest test-batch-update
+  (a/with-connection [conn u/ds]
+    (a/batch-update sql-insert [["Joe Coder"     100000 "Accounts"]
+                                ["Harry Hacker"   90000 "R&D"]
+                                ["Sam Librarian"  85000 "Library"]
+                                ["Kishore Newbie" 55000 "Sales"]
+                                ["Neal Manager"  110000 "Marketing"]] conn))
+  (a/with-connection [conn u/ds]
+      (a/batch-update "UPDATE emp SET salary = ? WHERE id = ?" [[100001 1]
+                                                                [ 90002 2]
+                                                                [ 85003 3]
+                                                                [ 55004 4]
+                                                                [110005 5]] conn))
+  (is (= [[100001]
+          [ 90002]
+          [ 85003]
+          [ 55004]
+          [110005]]
+        (mapv vec (a/with-connection [conn u/ds]
+                    (a/query a/fetch-rows "SELECT salary FROM emp" [] conn))))))
+
+
 (deftest test-transaction-commit
   (let [vs1 ["Joe Coder" 100000 "Accounts"]
         upa {:new-salary 110000
