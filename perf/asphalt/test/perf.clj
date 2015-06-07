@@ -50,8 +50,8 @@
              (jdbc/insert! db-con :emp data)
              (jdbc/delete! db-con :emp []))
            (do
-             (a/update sql-insert data conn)
-             (a/update sql-delete nil conn))))))))
+             (a/update conn sql-insert data)
+             (a/update conn sql-delete nil))))))))
 
 
 (deftest bench-select
@@ -60,16 +60,16 @@
                 :salary 100000
                 :dept "Accounts"}]
       (a/with-connection [conn u/ds]
-        (a/update sql-insert data conn))
+        (a/update conn sql-insert data))
       ;; bench c.j.j normal with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (a/with-connection [conn u/ds]
           (c/compare-perf "select-row"
             (jdbc/query db-con [cjj-select])
-            (a/query a/fetch-rows sql-select nil conn))))
+            (a/query conn a/fetch-rows sql-select nil))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (a/with-connection [conn u/ds]
           (c/compare-perf "select-row-as-arrays"
             (jdbc/query db-con [cjj-select] :as-arrays? true)
-            (a/query a/fetch-rows sql-select nil conn)))))))
+            (a/query conn a/fetch-rows sql-select nil)))))))

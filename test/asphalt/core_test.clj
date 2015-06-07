@@ -42,28 +42,28 @@
         upv [110000 "Accounts"]]
     ;; create
     (let [generated-key (a/with-connection [conn u/ds]
-                          (a/genkey a/fetch-single-value sql-insert row conn))]
+                          (a/genkey conn a/fetch-single-value sql-insert row))]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
     (is (= 1 (a/with-connection [conn u/ds]
-               (a/query a/fetch-single-value sql-count [] conn))) "Verify that row was inserted")
+               (a/query conn a/fetch-single-value sql-count []))) "Verify that row was inserted")
     ;; retrieve
     (is (= vs1
           (vec (a/with-connection [conn u/ds]
-                 (a/query a/fetch-single-row sql-select [] conn)))))
+                 (a/query conn a/fetch-single-row sql-select [])))))
     ;; update
     (a/with-connection [conn u/ds]
-      (a/update sql-update upa conn))
+      (a/update conn sql-update upa))
     (testing "vanilla vector params"
       (a/with-connection [conn u/ds]
-        (a/update sql-update upv conn)))
+        (a/update conn sql-update upv)))
     (is (= vs2
           (vec (a/with-connection [conn u/ds]
-                 (a/query a/fetch-single-row sql-select [] conn)))))
+                 (a/query conn a/fetch-single-row sql-select [])))))
     ;; delete
     (a/with-connection [conn u/ds]
-      (a/update sql-delete [] conn))
+      (a/update conn sql-delete []))
     (is (= 0 (a/with-connection [conn u/ds]
-               (a/query a/fetch-single-value sql-count [] conn))) "Verify that row was deleted")))
+               (a/query conn a/fetch-single-value sql-count []))) "Verify that row was deleted")))
 
 
 (deftest test-rows
@@ -72,11 +72,11 @@
     ;; 50 rows
     (a/with-connection [conn u/ds]
       (dotimes [_ 50]
-        (a/update sql-insert row conn)))
+        (a/update conn sql-insert row)))
     (is (= 50 (a/with-connection [conn u/ds]
-                (a/query a/fetch-single-value sql-count [] conn))) "Verify that all rows were inserted")
+                (a/query conn a/fetch-single-value sql-count []))) "Verify that all rows were inserted")
     (doseq [each (a/with-connection [conn u/ds]
-                   (a/query a/fetch-rows sql-select [] conn))]
+                   (a/query conn a/fetch-rows sql-select []))]
       (is (= (vec each) vs1)))))
 
 
@@ -85,24 +85,24 @@
 
 (deftest test-batch-update
   (a/with-connection [conn u/ds]
-    (a/batch-update sql-insert [["Joe Coder"     100000 "Accounts"]
-                                ["Harry Hacker"   90000 "R&D"]
-                                ["Sam Librarian"  85000 "Library"]
-                                ["Kishore Newbie" 55000 "Sales"]
-                                ["Neal Manager"  110000 "Marketing"]] conn))
+    (a/batch-update conn sql-insert [["Joe Coder"     100000 "Accounts"]
+                                     ["Harry Hacker"   90000 "R&D"]
+                                     ["Sam Librarian"  85000 "Library"]
+                                     ["Kishore Newbie" 55000 "Sales"]
+                                     ["Neal Manager"  110000 "Marketing"]]))
   (a/with-connection [conn u/ds]
-      (a/batch-update "UPDATE emp SET salary = ? WHERE id = ?" [[100001 1]
-                                                                [ 90002 2]
-                                                                [ 85003 3]
-                                                                [ 55004 4]
-                                                                [110005 5]] conn))
+      (a/batch-update conn "UPDATE emp SET salary = ? WHERE id = ?" [[100001 1]
+                                                                     [ 90002 2]
+                                                                     [ 85003 3]
+                                                                     [ 55004 4]
+                                                                     [110005 5]]))
   (is (= [[100001]
           [ 90002]
           [ 85003]
           [ 55004]
           [110005]]
         (mapv vec (a/with-connection [conn u/ds]
-                    (a/query a/fetch-rows "SELECT salary FROM emp" [] conn))))))
+                    (a/query conn a/fetch-rows "SELECT salary FROM emp" []))))))
 
 
 (deftest test-transaction-commit
@@ -112,14 +112,14 @@
         vs2 ["Harry Hacker" 90000 "R&D"]]
     ;; insert one record
     (a/with-connection [conn u/ds]
-      (a/genkey a/fetch-single-value sql-insert vs1 conn))
+      (a/genkey conn a/fetch-single-value sql-insert vs1))
     ;; transaction that commits
     (a/with-transaction [conn u/ds] :read-committed
-      (a/update sql-update upa conn)
-      (a/genkey a/fetch-single-value sql-insert vs2 conn))
+      (a/update conn sql-update upa)
+      (a/genkey conn a/fetch-single-value sql-insert vs2))
     ;; verify result
     (is (= 2 (a/with-connection [conn u/ds]
-               (a/query a/fetch-single-value sql-count [] conn))) "Verify that rows were inserted")))
+               (a/query conn a/fetch-single-value sql-count []))) "Verify that rows were inserted")))
 
 
 (deftest test-transaction-rollback
@@ -129,16 +129,16 @@
         vs2 ["Harry Hacker" 90000 "R&D"]]
     ;; insert one record
     (a/with-connection [conn u/ds]
-      (a/genkey a/fetch-single-value sql-insert vs1 conn))
+      (a/genkey conn a/fetch-single-value sql-insert vs1))
     ;; transaction that commits
     (is (thrown? IllegalStateException
           (a/with-transaction [conn u/ds] :read-committed
-            (a/update sql-update upa conn)
+            (a/update conn sql-update upa)
             (throw (IllegalStateException. "boom!"))
-            (a/genkey a/fetch-single-value sql-insert vs2 conn))))
+            (a/genkey conn a/fetch-single-value sql-insert vs2))))
     ;; verify result
     (is (= 1 (a/with-connection [conn u/ds]
-               (a/query a/fetch-single-value sql-count [] conn))) "Second row should not be inserted")
+               (a/query conn a/fetch-single-value sql-count []))) "Second row should not be inserted")
     (is (= vs1
           (vec (a/with-connection [conn u/ds]
-                 (a/query a/fetch-single-row sql-select [] conn)))) "Only original values should exist")))
+                 (a/query conn a/fetch-single-row sql-select [])))) "Only original values should exist")))

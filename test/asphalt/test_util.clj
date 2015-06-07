@@ -24,10 +24,10 @@
 (defn create-db
   []
   (a/with-connection [conn ds]
-    (a/update (:create-ddl config) [] conn)))
+    (a/update conn (:create-ddl config) [])))
 
 
 (defn drop-db
   []
   (a/with-connection [conn ds]
-    (a/update (:drop-ddl config) [] conn)))
+    (a/update conn (:drop-ddl config) [])))
