@@ -111,6 +111,9 @@
 (definline param-pairs [^SQLTemplate x] `(:param-pairs ~x))
 
 
+(definline result-column-types [^SQLTemplate x] `(:result-column-types ~x))
+
+
 (defn sql-template?
   "Return true if specified arg is an instance of SQLTemplate, false otherwise."
   [x]

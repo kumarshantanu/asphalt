@@ -212,10 +212,14 @@
   ([^Connection connection result-set-worker params-setter sql-or-template params]
     (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) false)]
       (if (i/sql-template? sql-or-template)
-        (params-setter pstmt (i/param-pairs sql-or-template) params)
-        (params-setter pstmt params))
-      (with-open [^ResultSet result-set (.executeQuery pstmt)]
-        (result-set-worker result-set)))))
+        (do
+          (params-setter pstmt (i/param-pairs sql-or-template) params)
+          (with-open [^ResultSet result-set (.executeQuery pstmt)]
+            (result-set-worker result-set (i/result-column-types sql-or-template))))
+        (do
+          (params-setter pstmt params)
+          (with-open [^ResultSet result-set (.executeQuery pstmt)]
+            (result-set-worker result-set)))))))
 
 
 (defn genkey
