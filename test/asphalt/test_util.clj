@@ -23,11 +23,9 @@
 
 (defn create-db
   []
-  (a/with-connection [conn ds]
-    (a/update conn (:create-ddl config) [])))
+  (a/update ds (:create-ddl config) []))
 
 
 (defn drop-db
   []
-  (a/with-connection [conn ds]
-    (a/update conn (:drop-ddl config) [])))
+  (a/update ds (:drop-ddl config) []))

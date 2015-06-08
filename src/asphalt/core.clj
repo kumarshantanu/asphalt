@@ -274,59 +274,75 @@
   "Execute query with params and process the java.sql.ResultSet instance with result-set-worker. The java.sql.ResultSet
   instance is closed in the end, so result-set-worker should neither close it nor make a direct/indirect reference to
   it in the value it returns."
-  ([result-set-worker ^Connection connection sql-or-template params]
-    (query i/set-params! result-set-worker ^Connection connection sql-or-template params))
-  ([params-setter result-set-worker ^Connection connection sql-or-template params]
-    (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) false)]
-      (if (i/sql-template? sql-or-template)
-        (do
-          (params-setter pstmt (i/param-pairs sql-or-template) params)
-          (with-open [^ResultSet result-set (.executeQuery pstmt)]
-            (result-set-worker result-set (i/result-column-types sql-or-template))))
-        (do
-          (params-setter pstmt params)
-          (with-open [^ResultSet result-set (.executeQuery pstmt)]
-            (result-set-worker result-set)))))))
+  ([result-set-worker data-source-or-connection sql-or-template params]
+    (query i/set-params! result-set-worker data-source-or-connection sql-or-template params))
+  ([params-setter result-set-worker data-source-or-connection sql-or-template params]
+    (if (instance? DataSource data-source-or-connection)
+      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
+        (query params-setter result-set-worker connection sql-or-template params))
+      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+                                             (i/resolve-sql sql-or-template) false)]
+        (if (i/sql-template? sql-or-template)
+          (do
+            (params-setter pstmt (i/param-pairs sql-or-template) params)
+            (with-open [^ResultSet result-set (.executeQuery pstmt)]
+              (result-set-worker result-set (i/result-column-types sql-or-template))))
+          (do
+            (params-setter pstmt params)
+            (with-open [^ResultSet result-set (.executeQuery pstmt)]
+              (result-set-worker result-set))))))))
 
 
 (defn genkey
-  ([^Connection connection sql-or-template params]
-    (genkey i/set-params! fetch-single-value connection sql-or-template params))
-  ([result-set-worker ^Connection connection sql-or-template params]
-    (genkey i/set-params! result-set-worker connection sql-or-template params))
-  ([params-setter result-set-worker ^Connection connection sql-or-template params]
-    (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
-      (if (i/sql-template? sql-or-template)
-        (params-setter pstmt (i/param-pairs sql-or-template) params)
-        (params-setter pstmt params))
-      (.executeUpdate pstmt)
-      (with-open [^ResultSet generated-keys (.getGeneratedKeys pstmt)]
-        (result-set-worker generated-keys)))))
+  ([data-source-or-connection sql-or-template params]
+    (genkey i/set-params! fetch-single-value data-source-or-connection sql-or-template params))
+  ([result-set-worker data-source-or-connection sql-or-template params]
+    (genkey i/set-params! result-set-worker data-source-or-connection sql-or-template params))
+  ([params-setter result-set-worker data-source-or-connection sql-or-template params]
+    (if (instance? DataSource data-source-or-connection)
+      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
+        (genkey params-setter result-set-worker connection sql-or-template params))
+      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+                                             (i/resolve-sql sql-or-template) true)]
+        (if (i/sql-template? sql-or-template)
+          (params-setter pstmt (i/param-pairs sql-or-template) params)
+          (params-setter pstmt params))
+        (.executeUpdate pstmt)
+        (with-open [^ResultSet generated-keys (.getGeneratedKeys pstmt)]
+          (result-set-worker generated-keys))))))
 
 
 (defn update
-  ([^Connection connection sql-or-template params]
-    (update i/set-params! connection sql-or-template params))
-  ([params-setter ^Connection connection sql-or-template params]
-    (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
-      (if (i/sql-template? sql-or-template)
-        (params-setter pstmt (i/param-pairs sql-or-template) params)
-        (params-setter pstmt params))
-      (.executeUpdate pstmt))))
+  ([data-source-or-connection sql-or-template params]
+    (update i/set-params! data-source-or-connection sql-or-template params))
+  ([params-setter data-source-or-connection sql-or-template params]
+    (if (instance? DataSource data-source-or-connection)
+      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
+        (update params-setter connection sql-or-template params))
+      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+                                             (i/resolve-sql sql-or-template) true)]
+        (if (i/sql-template? sql-or-template)
+          (params-setter pstmt (i/param-pairs sql-or-template) params)
+          (params-setter pstmt params))
+        (.executeUpdate pstmt)))))
 
 
 (defn batch-update
   "Execute a SQL write statement with a batch of parameters returning the number of rows updated as a vector."
-  ([^Connection connection sql-or-template batch-params]
-    (batch-update i/set-params! ^Connection connection sql-or-template batch-params))
-  ([params-setter ^Connection connection sql-or-template batch-params]
-    (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
-      (if (i/sql-template? sql-or-template)
-        (let [param-pairs (i/param-pairs sql-or-template)]
+  ([data-source-or-connection sql-or-template batch-params]
+    (batch-update i/set-params! data-source-or-connection sql-or-template batch-params))
+  ([params-setter data-source-or-connection sql-or-template batch-params]
+    (if (instance? DataSource data-source-or-connection)
+      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
+        (batch-update params-setter connection sql-or-template batch-params))
+      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+                                             (i/resolve-sql sql-or-template) true)]
+        (if (i/sql-template? sql-or-template)
+          (let [param-pairs (i/param-pairs sql-or-template)]
+            (doseq [params batch-params]
+              (params-setter pstmt param-pairs params)
+              (.addBatch pstmt)))
           (doseq [params batch-params]
-            (params-setter pstmt param-pairs params)
+            (params-setter pstmt params)
             (.addBatch pstmt)))
-        (doseq [params batch-params]
-          (params-setter pstmt params)
-          (.addBatch pstmt)))
-      (vec (.executeBatch pstmt)))))
+        (vec (.executeBatch pstmt))))))
