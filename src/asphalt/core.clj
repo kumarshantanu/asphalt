@@ -273,10 +273,10 @@
   "Given a java.sql.ResultSet instance fetch a vector of rows using row-maker, an arity-2 function that accepts
   java.sql.ResultSet and column-count, and by default returns a vector of column values."
   ([^ResultSet result-set]
-    (fetch-rows result-set i/read-result-row nil))
+    (fetch-rows i/read-result-row result-set nil))
   ([^ResultSet result-set result-column-types]
-    (fetch-rows result-set i/read-result-row result-column-types))
-  ([^ResultSet result-set row-maker ^ints result-column-types]
+    (fetch-rows i/read-result-row result-set result-column-types))
+  ([row-maker ^ResultSet result-set ^ints result-column-types]
     (let [rows (transient [])]
       (if (seq result-column-types)
         (while (.next result-set)
@@ -292,10 +292,10 @@
   "Given a java.sql.ResultSet instance ensure it has exactly one row and fetch it using row-maker, an arity-2 function
   that accepts java.sql.ResultSet and column-count, and by default returns a vector of column values."
   ([^ResultSet result-set]
-    (fetch-single-row result-set i/read-result-row nil))
+    (fetch-single-row i/read-result-row result-set nil))
   ([^ResultSet result-set result-column-types]
-    (fetch-single-row result-set i/read-result-row result-column-types))
-  ([^ResultSet result-set row-maker ^ints result-column-types]
+    (fetch-single-row i/read-result-row result-set result-column-types))
+  ([row-maker ^ResultSet result-set ^ints result-column-types]
     (if (.next result-set)
       (let [row (if (seq result-column-types)
                   (row-maker result-set result-column-types)
@@ -312,10 +312,10 @@
   "Given a java.sql.ResultSet instance ensure it has exactly one row and one column, and fetch it using column-reader,
   an arity-1 function that accepts java.sql.ResultSet and returns the column value."
   ([^ResultSet result-set]
-    (fetch-single-value result-set i/read-column-value nil))
+    (fetch-single-value i/read-column-value result-set nil))
   ([^ResultSet result-set result-column-types]
-    (fetch-single-value result-set i/read-column-value result-column-types))
-  ([^ResultSet result-set column-reader ^ints result-column-types]
+    (fetch-single-value i/read-column-value result-set result-column-types))
+  ([column-reader ^ResultSet result-set ^ints result-column-types]
     (let [^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
       (when (not= 1 column-count)
