@@ -42,8 +42,7 @@
         upv [110000 "Accounts"]]
     ;; create
     (let [generated-key (a/with-connection [conn u/ds]
-                          (a/genkey a/fetch-single-value
-                            conn sql-insert row))]
+                          (a/genkey conn sql-insert row))]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
     (is (= 1 (a/with-connection [conn u/ds]
                (a/query a/fetch-single-value
@@ -120,13 +119,11 @@
         vs2 ["Harry Hacker" 90000 "R&D"]]
     ;; insert one record
     (a/with-connection [conn u/ds]
-      (a/genkey a/fetch-single-value
-        conn sql-insert vs1))
+      (a/genkey conn sql-insert vs1))
     ;; transaction that commits
     (a/with-transaction [conn u/ds] :read-committed
       (a/update conn sql-update upa)
-      (a/genkey a/fetch-single-value
-        conn sql-insert vs2))
+      (a/genkey conn sql-insert vs2))
     ;; verify result
     (is (= 2 (a/with-connection [conn u/ds]
                (a/query a/fetch-single-value
@@ -140,15 +137,13 @@
         vs2 ["Harry Hacker" 90000 "R&D"]]
     ;; insert one record
     (a/with-connection [conn u/ds]
-      (a/genkey a/fetch-single-value
-        conn sql-insert vs1))
+      (a/genkey conn sql-insert vs1))
     ;; transaction that commits
     (is (thrown? IllegalStateException
           (a/with-transaction [conn u/ds] :read-committed
             (a/update conn sql-update upa)
             (throw (IllegalStateException. "boom!"))
-            (a/genkey a/fetch-single-value
-              conn sql-insert vs2))))
+            (a/genkey conn sql-insert vs2))))
     ;; verify result
     (is (= 1 (a/with-connection [conn u/ds]
                (a/query a/fetch-single-value

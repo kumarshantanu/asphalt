@@ -97,6 +97,73 @@
     `(def ~var-symbol (parse-sql ~sql ~options))))
 
 
+;; ----- java.sql.ResultSet operations -----
+
+
+(def fetch-maps (comp doall resultset-seq))
+
+
+(defn fetch-rows
+  "Given a java.sql.ResultSet instance fetch a vector of rows using row-maker, an arity-2 function that accepts
+  java.sql.ResultSet and column-count, and by default returns a vector of column values."
+  ([^ResultSet result-set]
+    (fetch-rows i/read-result-row result-set nil))
+  ([^ResultSet result-set result-column-types]
+    (fetch-rows i/read-result-row result-set result-column-types))
+  ([row-maker ^ResultSet result-set ^ints result-column-types]
+    (let [rows (transient [])]
+      (if (seq result-column-types)
+        (while (.next result-set)
+          (conj! rows (row-maker result-set result-column-types)))
+        (let [^ResultSetMetaData rsmd (.getMetaData result-set)
+              column-count (.getColumnCount rsmd)]
+          (while (.next result-set)
+            (conj! rows (row-maker result-set column-count)))))
+      (persistent! rows))))
+
+
+(defn fetch-single-row
+  "Given a java.sql.ResultSet instance ensure it has exactly one row and fetch it using row-maker, an arity-2 function
+  that accepts java.sql.ResultSet and column-count, and by default returns a vector of column values."
+  ([^ResultSet result-set]
+    (fetch-single-row i/read-result-row result-set nil))
+  ([^ResultSet result-set result-column-types]
+    (fetch-single-row i/read-result-row result-set result-column-types))
+  ([row-maker ^ResultSet result-set ^ints result-column-types]
+    (if (.next result-set)
+      (let [row (if (seq result-column-types)
+                  (row-maker result-set result-column-types)
+                  (let [^ResultSetMetaData rsmd (.getMetaData result-set)
+                        column-count (.getColumnCount rsmd)]
+                    (row-maker result-set column-count)))]
+        (if (.next result-set)
+          (throw (RuntimeException. "Expected exactly one JDBC result row, but found more than one."))
+          row))
+      (throw (RuntimeException. "Expected exactly one JDBC result row, but found no result row.")))))
+
+
+(defn fetch-single-value
+  "Given a java.sql.ResultSet instance ensure it has exactly one row and one column, and fetch it using column-reader,
+  an arity-1 function that accepts java.sql.ResultSet and returns the column value."
+  ([^ResultSet result-set]
+    (fetch-single-value i/read-column-value result-set nil))
+  ([^ResultSet result-set result-column-types]
+    (fetch-single-value i/read-column-value result-set result-column-types))
+  ([column-reader ^ResultSet result-set ^ints result-column-types]
+    (let [^ResultSetMetaData rsmd (.getMetaData result-set)
+          column-count (.getColumnCount rsmd)]
+      (when (not= 1 column-count)
+        (throw (RuntimeException. (str "Expected exactly one JDBC result column but found: " column-count))))
+      (if (.next result-set)
+        (let [column-value (if (seq result-column-types)
+                             (column-reader result-set 1 (first result-column-types))
+                             (column-reader result-set 1))]
+          (if (.next result-set)
+            (throw (RuntimeException. "Expected exactly one JDBC result row, but found more than one."))
+            column-value))
+        (throw (RuntimeException. "Expected exactly one JDBC result row, but found no result row"))))))
+
+
 ;; ----- working with javax.sql.DataSource -----
 
 
@@ -223,6 +290,8 @@
 
 
 (defn genkey
+  ([^Connection connection sql-or-template params]
+    (genkey i/set-params! fetch-single-value connection sql-or-template params))
   ([result-set-worker ^Connection connection sql-or-template params]
     (genkey i/set-params! result-set-worker connection sql-or-template params))
   ([params-setter result-set-worker ^Connection connection sql-or-template params]
@@ -261,70 +330,3 @@
           (params-setter pstmt params)
           (.addBatch pstmt)))
       (vec (.executeBatch pstmt)))))
-
-
-;; ----- java.sql.ResultSet operations -----
-
-
-(def fetch-maps (comp doall resultset-seq))
-
-
-(defn fetch-rows
-  "Given a java.sql.ResultSet instance fetch a vector of rows using row-maker, an arity-2 function that accepts
-  java.sql.ResultSet and column-count, and by default returns a vector of column values."
-  ([^ResultSet result-set]
-    (fetch-rows i/read-result-row result-set nil))
-  ([^ResultSet result-set result-column-types]
-    (fetch-rows i/read-result-row result-set result-column-types))
-  ([row-maker ^ResultSet result-set ^ints result-column-types]
-    (let [rows (transient [])]
-      (if (seq result-column-types)
-        (while (.next result-set)
-          (conj! rows (row-maker result-set result-column-types)))
-        (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-              column-count (.getColumnCount rsmd)]
-          (while (.next result-set)
-            (conj! rows (row-maker result-set column-count)))))
-      (persistent! rows))))
-
-
-(defn fetch-single-row
-  "Given a java.sql.ResultSet instance ensure it has exactly one row and fetch it using row-maker, an arity-2 function
-  that accepts java.sql.ResultSet and column-count, and by default returns a vector of column values."
-  ([^ResultSet result-set]
-    (fetch-single-row i/read-result-row result-set nil))
-  ([^ResultSet result-set result-column-types]
-    (fetch-single-row i/read-result-row result-set result-column-types))
-  ([row-maker ^ResultSet result-set ^ints result-column-types]
-    (if (.next result-set)
-      (let [row (if (seq result-column-types)
-                  (row-maker result-set result-column-types)
-                  (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-                        column-count (.getColumnCount rsmd)]
-                    (row-maker result-set column-count)))]
-        (if (.next result-set)
-          (throw (RuntimeException. "Expected exactly one JDBC result row, but found more than one."))
-          row))
-      (throw (RuntimeException. "Expected exactly one JDBC result row, but found no result row.")))))
-
-
-(defn fetch-single-value
-  "Given a java.sql.ResultSet instance ensure it has exactly one row and one column, and fetch it using column-reader,
-  an arity-1 function that accepts java.sql.ResultSet and returns the column value."
-  ([^ResultSet result-set]
-    (fetch-single-value i/read-column-value result-set nil))
-  ([^ResultSet result-set result-column-types]
-    (fetch-single-value i/read-column-value result-set result-column-types))
-  ([column-reader ^ResultSet result-set ^ints result-column-types]
-    (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-          column-count (.getColumnCount rsmd)]
-      (when (not= 1 column-count)
-        (throw (RuntimeException. (str "Expected exactly one JDBC result column but found: " column-count))))
-      (if (.next result-set)
-        (let [column-value (if (seq result-column-types)
-                             (column-reader result-set 1 (first result-column-types))
-                             (column-reader result-set 1))]
-          (if (.next result-set)
-            (throw (RuntimeException. "Expected exactly one JDBC result row, but found more than one."))
-            column-value))
-        (throw (RuntimeException. "Expected exactly one JDBC result row, but found no result row"))))))

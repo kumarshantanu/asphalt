@@ -30,8 +30,7 @@ This section covers the minimal examples only. Advanced features are covered in 
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/genkey a/fetch-single-value
-    conn
+  (a/genkey conn
     "INSERT INTO emp (name, salary, dept) VALUES (?, ?, ?)"
     ["Joe Coder" 100000 "Accounts"]))
 ```
@@ -92,8 +91,7 @@ With SQL-templates, you can pass param maps with keys as param names:
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/genkey a/fetch-single-value
-    conn
+  (a/genkey conn
     sql-insert
     {:name "Joe Coder" :salary 100000 :dept "Accounts"}))
 (a/with-connection [conn data-source]
