@@ -77,7 +77,7 @@
                            (= ch ^char tc) (handle-token "result-column-type" i valid-tchar? ts [false false true])
                            ;; catch-all case
                            :else       (do (.append sb ch) [false false false]))]
-          (recur (inc i) e? n? t?))))
+          (recur (unchecked-inc i) e? n? t?))))
     (i/make-sql-template
       (.toString sb)
       (mapv #(let [[p-name p-type] (i/split-param-name-and-type type-start-char %)]
