@@ -30,7 +30,8 @@ This section covers the minimal examples only. Advanced features are covered in 
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/genkey conn a/fetch-single-value
+  (a/genkey a/fetch-single-value
+    conn
     "INSERT INTO emp (name, salary, dept) VALUES (?, ?, ?)"
     ["Joe Coder" 100000 "Accounts"]))
 ```
@@ -51,7 +52,9 @@ You may use the `a/update` function for `INSERT`, `UPDATE`, `DELETE` statements 
 
 ```clojure
 (vec (a/with-connection [conn data-source]
-       (a/query conn a/fetch-single-row "SELECT name, salary, dept FROM emp" [])))
+       (a/query a/fetch-single-row
+         conn
+         "SELECT name, salary, dept FROM emp" [])))
 ```
 
 We wrap the call with `vec` here because `a/fetch-single-row` returns a Java array of column values. In programs you
@@ -67,7 +70,9 @@ may de-structure the column values directly from the returned Java array:
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/query conn a/fetch-rows "SELECT name, salary, dept FROM emp" []))
+  (a/query a/fetch-rows
+    conn
+    "SELECT name, salary, dept FROM emp" []))
 ```
 
 This returns a vector of rows, where each row is a Java array of column values.
@@ -87,7 +92,9 @@ With SQL-templates, you can pass param maps with keys as param names:
 
 ```clojure
 (a/with-connection [conn data-source]
-  (a/genkey conn a/fetch-single-value sql-insert
+  (a/genkey a/fetch-single-value
+    conn
+    sql-insert
     {:name "Joe Coder" :salary 100000 :dept "Accounts"}))
 (a/with-connection [conn data-source]
   (a/update conn sql-update {:new-salary 110000 :dept "Accounts"}))
@@ -119,7 +126,7 @@ type-hint every column, or not specify type-hints for any column at all.
 
 ```clojure
 (a/with-transaction [conn data-source] :read-committed
-  (let [[id salary dept] (a/query conn a/fetch-single-row sql-select-with-id [])
+  (let [[id salary dept] (a/query a/fetch-single-row conn sql-select-with-id [])
         new-salary (compute-new-salary salary dept)]
     (a/update conn sql-update {:new-salary new-salary :id id})))
 ```

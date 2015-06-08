@@ -66,10 +66,12 @@
         (a/with-connection [conn u/ds]
           (c/compare-perf "select-row"
             (jdbc/query db-con [cjj-select])
-            (a/query conn a/fetch-rows sql-select nil))))
+            (a/query a/fetch-rows
+              conn sql-select nil))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (a/with-connection [conn u/ds]
           (c/compare-perf "select-row-as-arrays"
             (jdbc/query db-con [cjj-select] :as-arrays? true)
-            (a/query conn a/fetch-rows sql-select nil)))))))
+            (a/query a/fetch-rows
+              conn sql-select nil)))))))

@@ -207,9 +207,9 @@
   "Execute query with params and process the java.sql.ResultSet instance with result-set-worker. The java.sql.ResultSet
   instance is closed in the end, so result-set-worker should neither close it nor make a direct/indirect reference to
   it in the value it returns."
-  ([^Connection connection result-set-worker sql-or-template params]
-    (query ^Connection connection result-set-worker i/set-params! sql-or-template params))
-  ([^Connection connection result-set-worker params-setter sql-or-template params]
+  ([result-set-worker ^Connection connection sql-or-template params]
+    (query i/set-params! result-set-worker ^Connection connection sql-or-template params))
+  ([params-setter result-set-worker ^Connection connection sql-or-template params]
     (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) false)]
       (if (i/sql-template? sql-or-template)
         (do
@@ -223,9 +223,9 @@
 
 
 (defn genkey
-  ([^Connection connection result-set-worker sql-or-template params]
-    (genkey connection result-set-worker i/set-params! sql-or-template params))
-  ([^Connection connection result-set-worker params-setter sql-or-template params]
+  ([result-set-worker ^Connection connection sql-or-template params]
+    (genkey i/set-params! result-set-worker connection sql-or-template params))
+  ([params-setter result-set-worker ^Connection connection sql-or-template params]
     (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
       (if (i/sql-template? sql-or-template)
         (params-setter pstmt (i/param-pairs sql-or-template) params)
@@ -237,8 +237,8 @@
 
 (defn update
   ([^Connection connection sql-or-template params]
-    (update connection i/set-params! sql-or-template params))
-  ([^Connection connection params-setter sql-or-template params]
+    (update i/set-params! connection sql-or-template params))
+  ([params-setter ^Connection connection sql-or-template params]
     (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
       (if (i/sql-template? sql-or-template)
         (params-setter pstmt (i/param-pairs sql-or-template) params)
@@ -249,8 +249,8 @@
 (defn batch-update
   "Execute a SQL write statement with a batch of parameters returning the number of rows updated as a vector."
   ([^Connection connection sql-or-template batch-params]
-    (batch-update ^Connection connection i/set-params! sql-or-template batch-params))
-  ([^Connection connection params-setter sql-or-template batch-params]
+    (batch-update i/set-params! ^Connection connection sql-or-template batch-params))
+  ([params-setter ^Connection connection sql-or-template batch-params]
     (with-open [^PreparedStatement pstmt (i/prepare-statement connection (i/resolve-sql sql-or-template) true)]
       (if (i/sql-template? sql-or-template)
         (let [param-pairs (i/param-pairs sql-or-template)]
