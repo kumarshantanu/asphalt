@@ -34,8 +34,6 @@ This section covers the minimal examples only. Advanced features are covered in 
   ["Joe Coder" 100000 "Accounts"])
 ```
 
-Function `a/fetch-single-value` works on a `java.sql.ResultSet` object returning the value of single row, single column.
-
 #### Update rows
 
 ```clojure
