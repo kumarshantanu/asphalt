@@ -197,22 +197,28 @@
 
 
 (defn wrap-transaction
+  "Given an arity-1 connection-worker fn, wrap it such that it prepares the specified transaction context on the
+  java.sql.Connection argument first."
   ([connection-worker]
     (wrap-transaction connection-worker nil))
   ([connection-worker transaction-isolation]
-    (fn [^Connection connection]
-      (.setAutoCommit connection false)
-      (when-not (nil? transaction-isolation)
-        (.setTransactionIsolation connection ^int (i/resolve-txn-isolation transaction-isolation)))
-      (try
-        (let [result (connection-worker connection)]
-          (.commit connection)
-          result)
-        (catch Exception e
+    (fn wrapper [data-source-or-connection]
+      (if (instance? DataSource data-source-or-connection)
+        (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
+          (wrapper connection))
+        (let [^Connection connection data-source-or-connection]
+          (.setAutoCommit connection false)
+          (when-not (nil? transaction-isolation)
+            (.setTransactionIsolation connection ^int (i/resolve-txn-isolation transaction-isolation)))
           (try
-            (.rollback connection)
-            (catch Exception _)) ; ignore auto-rollback exceptions
-          (throw e))))))
+            (let [result (connection-worker connection)]
+              (.commit connection)
+              result)
+            (catch Exception e
+              (try
+                (.rollback connection)
+                (catch Exception _)) ; ignore auto-rollback exceptions
+              (throw e))))))))
 
 
 (defn invoke-with-transaction
