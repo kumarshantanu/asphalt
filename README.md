@@ -126,6 +126,13 @@ rolled back.
 Supported isolation levels are: `:none`, `:read-committed`, `:read-uncommitted`, `:repeatable-read`, `:serializable`.
 
 
+## Development
+
+Running tests: `lein with-profile dev,c17 test`
+
+Running performance benchmarks: `lein with-profile dev,c17,perf test`
+
+
 ## License
 
 Copyright © 2015 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
