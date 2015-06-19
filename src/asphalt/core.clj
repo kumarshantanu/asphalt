@@ -87,6 +87,7 @@
 
 
 (defmacro defsql
+  "Define a parsed SQL template that can be used to execute it later."
   ([var-symbol sql]
     (when-not (symbol? var-symbol)
       (i/unexpected "a symbol" var-symbol))
