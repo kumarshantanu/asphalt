@@ -7,7 +7,7 @@
                                   [clj-dbcp "0.8.1"]
                                   [com.h2database/h2 "1.3.175"]]}
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
-             :c17 {:dependencies [[org.clojure/clojure "1.7.0-RC1"]]
+             :c17 {:dependencies [[org.clojure/clojure "1.7.0-RC2"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :perf {:dependencies [[citius "0.1.0"]
                                    [org.clojure/java.jdbc "0.3.7"]]
