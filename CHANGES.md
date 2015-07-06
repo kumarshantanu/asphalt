@@ -7,6 +7,11 @@
 * [Idea] Helpers (`defquery`, `defupdate`) to bind SQL templates with intended operations
 
 
+## 0.1.1 / 2015-July-06
+
+* Fix issue where default param setter wrongly assumed named params are always set in a SQL template
+
+
 ## 0.1.0 / 2015-June-19
 
 * Support for SQL-template with type annotations

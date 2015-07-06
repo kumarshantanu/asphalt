@@ -5,7 +5,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.1.0"]`
+Leiningen coordinates: `[asphalt "0.1.1"]`
 
 Most of what you would typically need is in the namespace `asphalt.core`, so `require` it first:
 
@@ -92,7 +92,7 @@ With SQL-templates, you can pass param maps with keys as param names:
 ### SQL templates with type hints
 
 The examples we saw above read and write values as objects, which means we depend on the JDBC driver for the conversion.
-SQL-templates let you optionally specify the types of params and also return columns in a query: 
+SQL-templates let you optionally specify the types of params and also return columns in a query:
 
 ```clojure
 (a/defsql sql-insert
