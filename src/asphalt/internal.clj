@@ -227,28 +227,35 @@
 
 (defn set-params!
   ([^PreparedStatement prepared-statement params]
-    (let [param-count (count params)]
-      (loop [i (int 0)]
-        (when (< i param-count)
-          (let [j (unchecked-inc i)]
-            (set-param-value! prepared-statement j (get params i))
-            (recur j))))))
+    (cond
+      (vector? params) (let [param-count (count params)]
+                         (loop [i (int 0)]
+                           (when (< i param-count)
+                             (let [j (unchecked-inc i)]
+                               (set-param-value! prepared-statement j (get params i))
+                               (recur j)))))
+      (nil? params)    nil
+      :otherwise       (unexpected "params vector" params)))
   ([^PreparedStatement prepared-statement ^objects param-types params]
-    (let [param-count (count param-types)]
-      (if (map? params)
-        (loop [i (int 0)]
-          (when (< i param-count)
-            (let [[param-key param-type] (aget param-types i)
-                  j (unchecked-inc i)]
-              (if (contains? params param-key)
-                (set-param-value! prepared-statement j param-type (get params param-key))
-                (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
-              (recur j))))
-        (loop [i (int 0)]
-          (when (< i param-count)
-            (let [j (unchecked-inc i)]
-              (set-param-value! prepared-statement j (second (aget param-types i)) (get params i))
-              (recur j))))))))
+    (cond
+      (map? params)    (let [param-count (alength param-types)]
+                         (loop [i (int 0)]
+                           (when (< i param-count)
+                             (let [[param-key param-type] (aget param-types i)
+                                   j (unchecked-inc i)]
+                               (if (contains? params param-key)
+                                 (set-param-value! prepared-statement j param-type (get params param-key))
+                                 (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
+                               (recur j)))))
+      (vector? params) (let [param-count (count params)]
+                         (loop [i (int 0)]
+                           (when (< i param-count)
+                             (let [j (unchecked-inc i)]
+                               (set-param-value! prepared-statement j (or (second (aget param-types i)) sql-nil)
+                                 (get params i))
+                               (recur j)))))
+      (nil? params)    nil
+      :otherwise       (unexpected "map or vector" params))))
 
 
 ;; ----- result-set stuff -----
