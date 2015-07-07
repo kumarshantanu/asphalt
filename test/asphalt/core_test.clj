@@ -29,6 +29,8 @@
 
 (a/defsql sql-select "SELECT name^string, salary^int, dept^string FROM emp")
 
+(a/defsql sql-selfew "SELECT name^string, salary^int, dept^string FROM emp WHERE name = ?")
+
 (a/defsql sql-update "UPDATE emp SET salary = $new-salary^int WHERE dept = $dept^string")
 
 (a/defsql sql-delete "DELETE FROM emp")
@@ -49,6 +51,9 @@
     (is (= vs1
           (vec (a/query a/fetch-single-row
                  u/ds sql-select []))))
+    (is (= vs1
+          (vec (a/query a/fetch-single-row
+                 u/ds sql-selfew [(first vs1)]))))
     ;; update
     (a/update u/ds sql-update upa)
     (testing "vanilla vector params"

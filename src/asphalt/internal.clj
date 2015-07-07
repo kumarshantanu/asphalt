@@ -247,12 +247,13 @@
                                  (set-param-value! prepared-statement j param-type (get params param-key))
                                  (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
                                (recur j)))))
-      (vector? params) (let [param-count (count params)]
+      (vector? params) (let [types-count (alength param-types)
+                             param-count (count params)]
                          (loop [i (int 0)]
                            (when (< i param-count)
                              (let [j (unchecked-inc i)]
-                               (set-param-value! prepared-statement j (or (second (aget param-types i)) sql-nil)
-                                 (get params i))
+                               (set-param-value! prepared-statement j
+                                 (if (< i types-count) (second (aget param-types i)) sql-nil) (get params i))
                                (recur j)))))
       (nil? params)    nil
       :otherwise       (unexpected "map or vector" params))))
