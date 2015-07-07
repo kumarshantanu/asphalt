@@ -5,7 +5,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.1.1"]`
+Leiningen coordinates: `[asphalt "0.1.2"]`
 
 Most of what you would typically need is in the namespace `asphalt.core`, so `require` it first:
 
