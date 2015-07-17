@@ -108,8 +108,12 @@ appropriate types are used when communicating with the JDBC driver.
 
 #### Caveats with SQL-template type hints
 
-Type hints are optional at each param level. However, when type-hinting the return columns in a query you should either
-type-hint every column, or not specify type-hints for any column at all.
+- Type hints are optional at each param level. However, when type-hinting the return columns in a query you should
+  either type-hint every column, or not specify type-hints for any column at all.
+- Wildcards (e.g. `SELECT *`) in return columns are tricky to use with return column type hints. You should hint
+  every return column type as in `SELECT * ^int ^string ^int ^date` if the return columns are of that type.
+- Queries that use `UNION` are also tricky to use with return column type hints. You should hint only one set of
+  return columns, not in every `UNION` sub-query.
 
 ### Transactions
 
