@@ -2,6 +2,7 @@
   (:require
     [clojure.string :as str])
   (:import
+    [java.io Writer]
     [java.util.regex Pattern]
     [java.sql Blob Clob Date Time Timestamp
               Connection PreparedStatement Statement
@@ -105,7 +106,14 @@
 
 
 (defrecord SQLTemplate
-  [^String sql ^objects param-pairs ^ints result-column-types])
+  [^String sql ^objects param-pairs ^bytes result-column-types])
+
+
+(defmethod print-method SQLTemplate [^SQLTemplate obj ^Writer w]
+  (let [m {:sql (.-sql obj)
+           :param-pairs (vec (.-param-pairs obj))
+           :result-column-types (vec (.-result-column-types obj))}]
+    (.write w (str "#SQLTemplate" (pr-str m)))))
 
 
 (definline param-pairs [^SQLTemplate x] `(:param-pairs ~x))
@@ -131,7 +139,7 @@
   ^SQLTemplate [sql param-pairs result-column-types]
   (when-not (string? sql)
     (unexpected "SQL string" sql))
-  (->SQLTemplate sql (object-array param-pairs) (int-array result-column-types)))
+  (->SQLTemplate sql (object-array param-pairs) (byte-array result-column-types)))
 
 
 ;; ----- SQL parsing helpers -----
@@ -400,7 +408,7 @@
   (let [column-count? (integer? column-count-or-types)
         column-count  (if column-count?
                         (int column-count-or-types)
-                        (count column-count-or-types))
+                        (alength ^bytes column-count-or-types))
         row (object-array column-count)]
     (if column-count?
       (loop [i (int 0)]
@@ -411,7 +419,7 @@
       (loop [i (int 0)]
         (when (< i column-count)
           (let [j (unchecked-inc i)]
-            (aset row i (read-column-value result-set j (aget ^ints column-count-or-types i)))
+            (aset row i (read-column-value result-set j (aget ^bytes column-count-or-types i)))
             (recur j)))))
     row))
 

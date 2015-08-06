@@ -58,9 +58,9 @@
     (fetch-rows i/read-result-row result-set nil))
   ([^ResultSet result-set result-column-types]
     (fetch-rows i/read-result-row result-set result-column-types))
-  ([row-maker ^ResultSet result-set ^ints result-column-types]
+  ([row-maker ^ResultSet result-set ^bytes result-column-types]
     (let [rows (transient [])]
-      (if (seq result-column-types)
+      (if (and result-column-types (pos? (alength result-column-types)))
         (while (.next result-set)
           (conj! rows (row-maker result-set result-column-types)))
         (let [^ResultSetMetaData rsmd (.getMetaData result-set)
@@ -77,9 +77,9 @@
     (fetch-single-row i/read-result-row result-set nil))
   ([^ResultSet result-set result-column-types]
     (fetch-single-row i/read-result-row result-set result-column-types))
-  ([row-maker ^ResultSet result-set ^ints result-column-types]
+  ([row-maker ^ResultSet result-set ^bytes result-column-types]
     (if (.next result-set)
-      (let [row (if (seq result-column-types)
+      (let [row (if (and result-column-types (pos? (alength result-column-types)))
                   (row-maker result-set result-column-types)
                   (let [^ResultSetMetaData rsmd (.getMetaData result-set)
                         column-count (.getColumnCount rsmd)]
@@ -97,14 +97,14 @@
     (fetch-single-value i/read-column-value result-set nil))
   ([^ResultSet result-set result-column-types]
     (fetch-single-value i/read-column-value result-set result-column-types))
-  ([column-reader ^ResultSet result-set ^ints result-column-types]
+  ([column-reader ^ResultSet result-set ^bytes result-column-types]
     (let [^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
       (when (not= 1 column-count)
         (throw (RuntimeException. (str "Expected exactly one JDBC result column but found: " column-count))))
       (if (.next result-set)
-        (let [column-value (if (seq result-column-types)
-                             (column-reader result-set 1 (first result-column-types))
+        (let [column-value (if (and result-column-types (pos? (alength result-column-types)))
+                             (column-reader result-set 1 (aget result-column-types 0))
                              (column-reader result-set 1))]
           (if (.next result-set)
             (throw (RuntimeException. "Expected exactly one JDBC result row, but found more than one."))
