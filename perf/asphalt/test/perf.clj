@@ -31,9 +31,9 @@
 ;dept   VARCHAR(50)"
 
 
-(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name^string, $salary^int, $dept^string)")
+(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES (^string $name, ^int $salary, ^string $dept)")
 (a/defsql sql-delete "DELETE FROM emp")
-(a/defsql sql-select "SELECT name^string, salary^int, dept^string FROM emp")
+(a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
 
 (def cjj-select "SELECT name, salary, dept FROM emp")
 

@@ -21,69 +21,16 @@
   that can be used later to extract param values from maps."
   ([^String sql]
     (parse-sql sql {}))
-  ([^String sql options]
-    (let [{:keys [escape-char param-start-char type-start-char name-encoder]
-           :or {escape-char \\ param-start-char \$ type-start-char \^}} options
-        ec escape-char       ; escape char
-        mc param-start-char  ; marker char
-        tc type-start-char   ; type char
-        nn (count sql)
-        ^StringBuilder sb (StringBuilder. nn)
-        ks (transient [])  ; param keys
-        ts (transient [])  ; result types
-        tlast (fn [t] (get t (dec (count t))))  ; `last` on a transient
-        conj-new! (fn [t name] (conj! t name))
-        conj-old! (fn [t name] (let [old (tlast t)] (conj! (pop! t) (str old name))))
-        valid-nchar? (fn [ch] (let [partial-name (tlast ks)] (i/valid-name-char? type-start-char partial-name ch)))
-        valid-tchar? (fn [ch] (let [partial-name (tlast ts)] (i/valid-type-char? partial-name ch)))
-        handle-token (fn [token-name i valid-char? t retval]
-                       (let [j (int (inc ^int i))]
-                         (cond
-                          (>= ^int i (dec nn)) (i/illegal-arg "SQL found ending with a dangling" token-name
-                                                 "marker char:" sql)
-                          (valid-char?
-                            (.charAt sql j))   (do (conj-new! t "") retval)
-                          :otherwise           (i/illegal-arg "Invalid first character in" token-name ":"
-                                                 (str \' (.charAt sql j) \') "at position" j))))]
-    (loop [i (int 0) ; current index
-           e? false  ; current escape state
-           n? false  ; parameter name in progress
-           t? false  ; result type in progress
-           ]
-      (if (>= i nn)
-        (cond
-          e? (i/illegal-arg "SQL found ending with dangling escape character:" sql)
-          n? (.append sb \?))
-        (let [ch (.charAt sql i)
-              [e? n? t?] (cond
-                           ;; escape mode
-                           e?              (do (.append sb ch) [false false false])
-                           ;; param name in progress?
-                           n?              (if (valid-nchar? ch)
-                                             (do (conj-old! ks ch) [false true  false])
-                                             (do (.append sb \?)
-                                               (.append sb ch)     [false false false]))
-                           ;; result type in progress?
-                           t?              (if (valid-tchar? ch)
-                                             (do (conj-old! ts ch) [false false true])
-                                             (do (.append sb ch)   [false false false]))
-                           ;; escape character encountered
-                           (= ch ^char ec) (if (>= i (dec nn))
-                                             (i/illegal-arg "SQL found ending with dangling escape character:" sql)
-                                             [true false false])
-                           ;; start of a param name?
-                           (= ch ^char mc) (handle-token "param-name" i valid-nchar? ks [false true false])
-                           ;; start of a result type?
-                           (= ch ^char tc) (handle-token "result-column-type" i valid-tchar? ts [false false true])
-                           ;; catch-all case
-                           :else       (do (.append sb ch) [false false false]))]
-          (recur (unchecked-inc i) e? n? t?))))
-    (i/make-sql-template
-      (.toString sb)
-      (mapv #(let [[p-name p-type] (i/split-param-name-and-type type-start-char %)]
-               [(i/encode-name p-name) (i/encode-type p-type sql)])
-        (persistent! ks))
-      (mapv #(i/encode-type % sql) (persistent! ts))))))
+  ([^String sql {:keys [escape-char param-start-char type-start-char name-encoder]
+                 :or {escape-char \\ param-start-char \$ type-start-char \^}
+                 :as options}]
+    (let [[sql named-params return-col-types]  (i/parse-sql-str sql escape-char param-start-char type-start-char)]
+      (i/make-sql-template
+        sql
+        (mapv #(let [[p-name p-type] %]
+                 [(i/encode-name p-name) (i/encode-type p-type sql)])
+          named-params)
+        (mapv #(i/encode-type % sql) return-col-types)))))
 
 
 (defmacro defsql

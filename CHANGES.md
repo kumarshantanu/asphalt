@@ -2,9 +2,16 @@
 
 ## TODO and Ideas
 
-* [TODO] Stored procedure calls
 * [Idea] Transaction propagation
 * [Idea] Helpers (`defquery`, `defupdate`) to bind SQL templates with intended operations
+
+
+## 2015-August-?? / 0.2.0-SNAPSHOT
+
+* Expect type hints _before_ subjects, consistent with Clojure
+* [TODO] Support stored procedure call
+* [TODO] Remove indirection when looking up param name/type (performance)
+* [TODO] Make type hint parsing robust (comments, string tokens etc.)
 
 
 ## 0.1.2 / 2015-July-07

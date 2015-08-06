@@ -148,40 +148,133 @@
     (get sql-type-map k)))
 
 
-(defn valid-type-char?
-  [^String partial-name ch]
+(defn valid-name-char?
+  [^StringBuilder partial-name ch]
   (if (empty? partial-name)
     (Character/isJavaIdentifierStart ^char ch)
     (or
-      (= ^char ch \-)  ; for keywords with hyphens
-      (Character/isJavaIdentifierPart ^char ch))))
+      (Character/isJavaIdentifierPart ^char ch)
+      ;; for keywords with hyphens
+      (= ^char ch \-))))
 
 
-(defn valid-name-char?
-  [type-start-char ^String partial-name ch]
-  (cond
-    (empty? partial-name)  (Character/isJavaIdentifierStart ^char ch)
-    (= type-start-char
-      (last partial-name)) (Character/isJavaIdentifierStart ^char ch)
-    :otherwise             (or
-                             (Character/isJavaIdentifierPart ^char ch)
-                             (= ^char ch \-)  ; for keywords with hyphens
-                             (and (seq partial-name)
-                               (= -1 (.indexOf partial-name (int type-start-char)))
-                               (= ^char ch ^char type-start-char)))))
+(defn valid-type-char?
+  [^StringBuilder partial-name ch]
+  (if (empty? partial-name)
+    (Character/isJavaIdentifierStart ^char ch)
+    (or
+      (Character/isJavaIdentifierPart ^char ch)
+      ;; for keywords with hyphens
+      (= ^char ch \-))))
 
 
-(defn split-param-name-and-type
-  "Given a string containing parameter name and (optional) type delimited by type-separator char, return either a
-  two-element vector containing parameter name and type, or a one-element vector containing only the parameter name."
-  [type-separator ^String param-name-and-type]  ; type is optional
-  (let [ts-index (.indexOf param-name-and-type (int type-separator))]
-    (when (= ts-index (dec (count param-name-and-type)))
-      (illegal-arg "Param key cannot end with type-separator: " param-name-and-type))
-    (when (not= ts-index (.lastIndexOf param-name-and-type (int type-separator)))
-      (illegal-arg "Multiple type separators found in the same param key:" param-name-and-type))
-    (str/split param-name-and-type
-      (re-pattern (Pattern/quote ^String (str ^char type-separator))))))
+(def initial-parser-state
+  {:c? false ; SQL comment in progress?
+   :d? false ; double-quote string in progress?
+   :e? false ; current escape state
+   :n? false ; named param in progress
+   :ns nil   ; partial named param string
+   :s? false ; single-quote string in progress?
+   :t? false ; type-hinted token in progress
+   :ts nil   ; partial type-hinted token string
+   })
+
+
+(defn finalize-parser-state
+  "Verify that final state is sane and clean up any unfinished stuff."
+  [sql ec name-handler parser-state]
+  (when (:d? parser-state) (illegal-arg "SQL cannot end with incomplete double-quote token:" sql))
+  (when (:e? parser-state) (illegal-arg (format "SQL cannot end with a dangling escape character '%s':" ec) sql))
+  (let [parser-state (merge parser-state (when (:n? parser-state)
+                                           (name-handler (:ns parser-state) (:ts parser-state))
+                                           {:ts nil :n? false :ns nil}))]
+    (when (:s? parser-state) (illegal-arg "SQL cannot end with incomplete single-quote token:" sql))
+    (when (:t? parser-state) (illegal-arg "SQL cannot end with a type hint"))
+    (when (:ts parser-state) (illegal-arg "SQL cannot end with a type hint"))))
+
+
+(defn update-param-name!
+  "Update named param name."
+  [^StringBuilder sb parser-state ch mc special-chars name-handler delta-state]
+  (let [^StringBuilder nsb (:ns parser-state)]
+    (if (valid-name-char? nsb ch)
+      (do (.append nsb ^char ch)
+        nil)
+      (if-let [c (special-chars ^char ch)]
+        (illegal-arg (format "Named parameter cannot precede special chars %s: %s%s%s%s"
+                       (pr-str special-chars) sb mc nsb c))
+        (do
+          (name-handler nsb (:ts parser-state))
+          (.append sb ^char ch)
+          delta-state)))))
+
+
+(defn update-type-hint!
+  [^StringBuilder sb parser-state ch tc delta-state]
+  (let [^StringBuilder tsb (:ts parser-state)]
+    (cond
+      ;; type char
+      (valid-type-char? tsb ^char ch)
+      (do (.append tsb ^char ch)        nil)
+      ;; whitespace implies type has ended
+      (Character/isWhitespace ^char ch) delta-state
+      ;; catch-all default case
+      :otherwise (illegal-arg
+                   (format "Expected type-hint '%s%s' to precede a whitespace, but found '%s': %s%s%s%s"
+                     tc (:ts parser-state) ch
+                     sb tc (:ts parser-state) ch)))))
+
+
+(defn encounter-sql-comment
+  [^StringBuilder sb delta-state]
+  (let [idx (unchecked-subtract (.length sb) 2)]
+    (when (and (>= idx 0)
+            (= (.charAt sb idx) \-))
+      delta-state)))
+
+
+(defn parse-sql-str
+  "Parse SQL string using escape char, named-param char and type-hint char, returning [sql named-params return-col-types]"
+  [^String sql ec mc tc]
+  (let [^char ec ec ^char mc mc ^char tc tc nn (count sql)
+        ^StringBuilder sb (StringBuilder. nn)
+        ks (transient [])  ; param keys
+        ts (transient [])  ; result column types
+        handle-named! (fn [^StringBuilder buff ^StringBuilder param-type]
+                        (.append sb \?)
+                        (conj! ks [(.toString buff) (when param-type (.toString param-type))]))
+        handle-typed! (fn [^StringBuilder buff] (conj! ts (.toString buff)))
+        special-chars #{ec mc tc \" \'}]
+    (loop [i 0 ; current index
+           s initial-parser-state]
+      (if (>= i nn)
+        (finalize-parser-state sql ec handle-named! s)
+        (let [ch (.charAt sql i)
+              ps (merge s
+                   (condp s false
+                    :c? (do (.append sb ch) (when (= ch \newline) {:c? false})) ; SQL comment in progress
+                    :d? (do (.append sb ch) (when (= ch \")       {:d? false})) ; double-quote string in progress
+                    :e? (do (.append sb ch)                       {:e? false})  ; escape state
+                    :n? (update-param-name!  ; clear :ts at end
+                          sb s ch mc special-chars handle-named!  {:ts nil :n? false :ns nil}) ; named param in progress
+                    :s? (do (.append sb ch) (when (= ch \')       {:s? false})) ; single-quote string in progress
+                    :t? (update-type-hint! sb s ch tc             {:t? false})  ; type-hint in progress (:ts intact)
+                    (condp = ch  ; catch-all
+                      mc                                          {:n? true :ns (StringBuilder.)}
+                      (do (when-let [^StringBuilder tsb (:ts s)]
+                            (handle-typed! tsb))
+                        (merge {:ts nil}
+                          (condp = ch
+                            ec                                    {:e? true}
+                            tc                                    {:t? true :ts (StringBuilder.)}
+                            (do (.append sb ch)
+                              (case ch
+                                \"                                {:d? true}
+                                \'                                {:s? true}
+                                \- (encounter-sql-comment sb      {:c? true})
+                                nil))))))))]
+          (recur (unchecked-inc i) ps))))
+    [(.toString sb) (persistent! ks) (persistent! ts)]))
 
 
 ;; ----- statement helpers -----
