@@ -1,4 +1,5 @@
 (ns asphalt.internal
+  (:refer-clojure :exclude [update])
   (:require
     [clojure.string :as str])
   (:import
@@ -103,43 +104,6 @@
                                              (remove nil?)
                                              (map name)
                                              (str/join ", "))))
-
-
-(defrecord SQLTemplate
-  [^String sql ^objects param-pairs ^bytes result-column-types])
-
-
-(defmethod print-method SQLTemplate [^SQLTemplate obj ^Writer w]
-  (let [m {:sql (.-sql obj)
-           :param-pairs (vec (.-param-pairs obj))
-           :result-column-types (vec (.-result-column-types obj))}]
-    (.write w (str "#SQLTemplate" (pr-str m)))))
-
-
-(definline param-pairs [^SQLTemplate x] `(:param-pairs ~x))
-
-
-(definline result-column-types [^SQLTemplate x] `(:result-column-types ~x))
-
-
-(defn sql-template?
-  "Return true if specified arg is an instance of SQLTemplate, false otherwise."
-  [x]
-  (instance? SQLTemplate x))
-
-
-(definline resolve-sql [x] `(if (sql-template? ~x) (:sql ~x) ~x))
-
-
-(defn make-sql-template
-  "Given SQL template arguments create an SQLTemplate instance. Example args are below:
-  sql - \"SELECT name, salary FROM emp WHERE salary > ? AND dept = ?\"
-  param-pairs - [[:salary :int] [:dept]]
-  result-column-types - [:string :int]"
-  ^SQLTemplate [sql param-pairs result-column-types]
-  (when-not (string? sql)
-    (unexpected "SQL string" sql))
-  (->SQLTemplate sql (object-array param-pairs) (byte-array result-column-types)))
 
 
 ;; ----- SQL parsing helpers -----
@@ -337,24 +301,25 @@
                                (recur j)))))
       (nil? params)    nil
       :otherwise       (unexpected "params vector" params)))
-  ([^PreparedStatement prepared-statement ^objects param-types params]
+  ([^PreparedStatement prepared-statement ^objects param-keys ^bytes param-types params]
     (cond
-      (map? params)    (let [param-count (alength param-types)]
+      (map? params)    (let [param-count (alength param-keys)]
                          (loop [i (int 0)]
                            (when (< i param-count)
-                             (let [[param-key param-type] (aget param-types i)
+                             (let [param-key  (aget param-keys i)
+                                   param-type (aget param-types i)
                                    j (unchecked-inc i)]
                                (if (contains? params param-key)
                                  (set-param-value! prepared-statement j param-type (get params param-key))
                                  (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
                                (recur j)))))
-      (vector? params) (let [types-count (alength param-types)
+      (vector? params) (let [types-count (alength param-keys)
                              param-count (count params)]
                          (loop [i (int 0)]
                            (when (< i param-count)
                              (let [j (unchecked-inc i)]
                                (set-param-value! prepared-statement j
-                                 (if (< i types-count) (second (aget param-types i)) sql-nil) (get params i))
+                                 (if (< i types-count) (aget param-types i) sql-nil) (get params i))
                                (recur j)))))
       (nil? params)    nil
       :otherwise       (unexpected "map or vector" params))))
@@ -402,26 +367,23 @@
       (unexpected supported-sql-types column-type))))
 
 
-(defn read-result-row
-  "Given a java.sql.ResultSet instance, read exactly one row as a vector and return the same."
-  [^ResultSet result-set column-count-or-types]
-  (let [column-count? (integer? column-count-or-types)
-        column-count  (if column-count?
-                        (int column-count-or-types)
-                        (alength ^bytes column-count-or-types))
-        row (object-array column-count)]
-    (if column-count?
+(defn read-columns
+  (^objects [^ResultSet result-set ^long column-count]
+    (let [^objects row (object-array column-count)]
       (loop [i (int 0)]
         (when (< i column-count)
           (let [j (unchecked-inc i)]
             (aset row i (read-column-value result-set j))
             (recur j))))
+      row))
+  (^objects [^ResultSet result-set ^long column-count ^bytes column-types]
+    (let [^objects row (object-array column-count)]
       (loop [i (int 0)]
         (when (< i column-count)
           (let [j (unchecked-inc i)]
-            (aset row i (read-column-value result-set j (aget ^bytes column-count-or-types i)))
-            (recur j)))))
-    row))
+            (aset row i (read-column-value result-set j (aget ^bytes column-types i)))
+            (recur j))))
+      row)))
 
 
 ;; ----- transaction stuff -----
@@ -458,3 +420,61 @@
                    :required
                    :requires-new
                    :supports})
+
+
+;; ----- protocol stuff -----
+
+
+(defrecord SQLTemplate
+  [^String sql ^objects param-keys ^bytes param-types ^bytes result-column-types])
+
+
+(defmethod print-method SQLTemplate [^SQLTemplate obj ^Writer w]
+  (let [m {:sql                 (.-sql obj)
+           :param-keys          (vec (.-param-keys obj))
+           :param-types         (vec (.-param-types obj))
+           :result-column-types (vec (.-result-column-types obj))}]
+    (.write w (str "#SQLTemplate" (pr-str m)))))
+
+
+(defn make-sql-template
+  "Given SQL template arguments create an SQLTemplate instance. Example args are below:
+  sql - \"SELECT name, salary FROM emp WHERE salary > ? AND dept = ?\"
+  param-pairs - [[:salary :int] [:dept]]
+  result-column-types - [:string :int]"
+  ^SQLTemplate [sql param-pairs result-column-types]
+  (when-not (string? sql)
+    (unexpected "SQL string" sql))
+  (let [param-keys (map first param-pairs)
+        param-types (map second param-pairs)]
+    (->SQLTemplate sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
+
+
+(defprotocol ISql
+  (get-sql    [this])
+  (set-params [this ^PreparedStatement prepared-statement params])
+  (read-col   [this ^ResultSet result-set column-index])
+  (read-row   [this ^ResultSet result-set column-count]))
+
+
+(extend-protocol ISql
+  SQLTemplate ; ----- SQL Template -----
+  (get-sql    [template] (.-sql template))
+  (set-params [template ^PreparedStatement prepared-statement params]
+    (set-params! prepared-statement ^objects (.-param-keys template) ^bytes (.-param-types template) params))
+  (read-col   [template ^ResultSet result-set ^long column-index]
+    (let [^bytes types (.-result-column-types template)]
+      (if (pos? (alength types))
+        (let [column-type (aget types (unchecked-dec column-index))]
+          (read-column-value result-set column-index column-type))
+        (read-column-value result-set column-index))))
+  (read-row   [template ^ResultSet result-set ^long column-count]
+    (let [^bytes types (.-result-column-types template)]
+      (if (pos? (alength types))
+        (read-columns result-set column-count types)
+        (read-columns result-set column-count))))
+  String ; ----- SQL string -----
+  (get-sql    [sql] sql)
+  (set-params [sql ^PreparedStatement prepared-statement params] (set-params! prepared-statement params))
+  (read-col   [sql ^ResultSet result-set ^long column-index]     (read-column-value result-set column-index))
+  (read-row   [sql ^ResultSet result-set ^long column-count]     (read-columns result-set column-count)))
