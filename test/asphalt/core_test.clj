@@ -27,7 +27,9 @@
 
 (a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES (^string $name, ^int $salary, ^string $dept)")
 
-(a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
+(a/defsql sql-select "SELECT ^string name, -- ^int age,
+-- ^boolean gender,
+^int salary, ^string dept FROM emp")
 
 (a/defsql sql-selfew "SELECT ^string name, ^int salary, ^string dept FROM emp WHERE name = ?")
 
