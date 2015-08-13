@@ -1,7 +1,8 @@
 (ns asphalt.internal
   (:refer-clojure :exclude [update])
   (:require
-    [clojure.string :as str])
+    [clojure.string :as str]
+    [asphalt.type   :as t])
   (:import
     [java.io Writer]
     [java.util.regex Pattern]
@@ -65,45 +66,35 @@
 ;; ----- type definitions -----
 
 
-(def ^:const sql-nil        0)
-(def ^:const sql-bool       1)
-(def ^:const sql-boolean    1) ; duplicate of bool
-(def ^:const sql-byte       2)
-(def ^:const sql-byte-array 3)
-(def ^:const sql-date       4)
-(def ^:const sql-double     5)
-(def ^:const sql-float      6)
-(def ^:const sql-int        7)
-(def ^:const sql-integer    7) ; duplicate for int
-(def ^:const sql-long       8)
-(def ^:const sql-nstring    9)
-(def ^:const sql-object    10)
-(def ^:const sql-string    11)
-(def ^:const sql-time      12)
-(def ^:const sql-timestamp 13)
-
-(def sql-type-map {nil         sql-nil
-                   :bool       sql-bool
-                   :boolean    sql-boolean
-                   :byte       sql-byte
-                   :byte-array sql-byte-array
-                   :date       sql-date
-                   :double     sql-double
-                   :float      sql-float
-                   :int        sql-int
-                   :integer    sql-integer
-                   :long       sql-long
-                   :nstring    sql-nstring
-                   :object     sql-object
-                   :string     sql-string
-                   :time       sql-time
-                   :timestamp  sql-timestamp})
+(def sql-type-map {nil         t/sql-nil
+                   :bool       t/sql-bool
+                   :boolean    t/sql-boolean
+                   :byte       t/sql-byte
+                   :byte-array t/sql-byte-array
+                   :date       t/sql-date
+                   :double     t/sql-double
+                   :float      t/sql-float
+                   :int        t/sql-int
+                   :integer    t/sql-integer
+                   :long       t/sql-long
+                   :nstring    t/sql-nstring
+                   :object     t/sql-object
+                   :string     t/sql-string
+                   :time       t/sql-time
+                   :timestamp  t/sql-timestamp})
 
 
 (def supported-sql-types (str "either of " (->> (keys sql-type-map)
                                              (remove nil?)
                                              (map name)
                                              (str/join ", "))))
+
+
+(def no-param-type-vec
+  (let [param-types-nil (repeat t/sql-nil)]
+    (memoize (fn [^long n]
+               (->> (take n param-types-nil)
+                 (apply vector-of :byte))))))
 
 
 ;; ----- SQL parsing helpers -----
@@ -319,7 +310,29 @@
                            (when (< i param-count)
                              (let [j (unchecked-inc i)]
                                (set-param-value! prepared-statement j
-                                 (if (< i types-count) (aget param-types i) sql-nil) (get params i))
+                                 (if (< i types-count) (aget param-types i) t/sql-nil) (get params i))
+                               (recur j)))))
+      (nil? params)    nil
+      :otherwise       (unexpected "map or vector" params)))
+  ([^PreparedStatement prepared-statement #_vector param-keys #_vector param-types _ params]
+    (cond
+      (map? params)    (let [param-count (count param-keys)]
+                         (loop [i (int 0)]
+                           (when (< i param-count)
+                             (let [param-key  (get param-keys i)
+                                   param-type (get param-types i)
+                                   j (unchecked-inc i)]
+                               (if (contains? params param-key)
+                                 (set-param-value! prepared-statement j param-type (get params param-key))
+                                 (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
+                               (recur j)))))
+      (vector? params) (let [types-count (count param-keys)
+                             param-count (count params)]
+                         (loop [i (int 0)]
+                           (when (< i param-count)
+                             (let [j (unchecked-inc i)]
+                               (set-param-value! prepared-statement j
+                                 (if (< i types-count) (get param-types i) t/sql-nil) (get params i))
                                (recur j)))))
       (nil? params)    nil
       :otherwise       (unexpected "map or vector" params))))
@@ -383,6 +396,14 @@
           (let [j (unchecked-inc i)]
             (aset row i (read-column-value result-set j (aget ^bytes column-types i)))
             (recur j))))
+      row))
+  (^objects [^ResultSet result-set ^long column-count column-types _]
+    (let [^objects row (object-array column-count)]
+      (loop [i (int 0)]
+        (when (< i column-count)
+          (let [j (unchecked-inc i)]
+            (aset row i (read-column-value result-set j (get column-types i)))
+            (recur j))))
       row)))
 
 
@@ -426,14 +447,14 @@
 
 
 (defrecord SQLTemplate
-  [^String sql ^objects param-keys ^bytes param-types ^bytes result-column-types])
+  [^String sql ^objects param-keys ^bytes param-types ^bytes result-types])
 
 
 (defmethod print-method SQLTemplate [^SQLTemplate obj ^Writer w]
-  (let [m {:sql                 (.-sql obj)
-           :param-keys          (vec (.-param-keys obj))
-           :param-types         (vec (.-param-types obj))
-           :result-column-types (vec (.-result-column-types obj))}]
+  (let [m {:sql          (.-sql obj)
+           :param-keys   (vec (.-param-keys obj))
+           :param-types  (vec (.-param-types obj))
+           :result-types (vec (.-result-types obj))}]
     (.write w (str "#SQLTemplate" (pr-str m)))))
 
 
@@ -450,30 +471,45 @@
     (->SQLTemplate sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
 
 
-(defprotocol ISql
-  (get-sql    [this])
-  (set-params [this ^PreparedStatement prepared-statement params])
-  (read-col   [this ^ResultSet result-set column-index])
-  (read-row   [this ^ResultSet result-set column-count]))
-
-
-(extend-protocol ISql
-  SQLTemplate ; ----- SQL Template -----
+(extend-protocol t/ISql
+  ;;=========
+  SQLTemplate
+  ;;=========
   (get-sql    [template] (.-sql template))
   (set-params [template ^PreparedStatement prepared-statement params]
     (set-params! prepared-statement ^objects (.-param-keys template) ^bytes (.-param-types template) params))
   (read-col   [template ^ResultSet result-set ^long column-index]
-    (let [^bytes types (.-result-column-types template)]
+    (let [^bytes types (.-result-types template)]
       (if (pos? (alength types))
         (let [column-type (aget types (unchecked-dec column-index))]
           (read-column-value result-set column-index column-type))
         (read-column-value result-set column-index))))
   (read-row   [template ^ResultSet result-set ^long column-count]
-    (let [^bytes types (.-result-column-types template)]
+    (let [^bytes types (.-result-types template)]
       (if (pos? (alength types))
         (read-columns result-set column-count types)
         (read-columns result-set column-count))))
-  String ; ----- SQL string -----
+  ;;===========
+  java.util.Map
+  ;;===========
+  (get-sql    [m] (:sql m))
+  (set-params [m ^PreparedStatement prepared-statement params]
+    (if-let [param-keys (:param-keys m)]
+      (let [param-types (or (:param-types m) (no-param-type-vec (count param-keys)))]
+        (set-params! prepared-statement param-keys param-types :vector params))
+      (set-params! prepared-statement params)))
+  (read-col   [m ^ResultSet result-set ^long column-index]
+    (if-let [types (:result-types m)]
+      (let [column-type (get types (unchecked-dec column-index))]
+        (read-column-value result-set column-index column-type))
+      (read-column-value result-set column-index)))
+  (read-row   [m ^ResultSet result-set ^long column-count]
+    (if-let [types (:result-types m)]
+      (read-columns result-set column-count types :vector)
+      (read-columns result-set column-count)))
+  ;;====
+  String
+  ;;====
   (get-sql    [sql] sql)
   (set-params [sql ^PreparedStatement prepared-statement params] (set-params! prepared-statement params))
   (read-col   [sql ^ResultSet result-set ^long column-index]     (read-column-value result-set column-index))

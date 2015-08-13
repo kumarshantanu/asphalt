@@ -10,8 +10,9 @@
 
 * Expect type hints _before_ subjects, consistent with Clojure
 * [TODO] Support stored procedure call
-* New SQL abstraction: `asphalt.internal.ISql`
-* Performance improvement via `ISql` implementation in `SQLTemplate`
+* New SQL abstraction: `asphalt.type.ISql`
+* ISql supports string, map and `SQLTemplate` out of the box
+* Performance improvement via primitive arrays in `SQLTemplate`
 * Make type hint parsing robust (comments, string tokens etc.)
 
 
