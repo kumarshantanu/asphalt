@@ -57,48 +57,54 @@
 
 (defn fetch-rows
   "Given a java.sql.ResultSet and asphalt.internal.ISql instances fetch a vector of rows using ISql."
-  [isql ^ResultSet result-set]
-  (let [rows (transient [])
-        ^ResultSetMetaData rsmd (.getMetaData result-set)
-        column-count (.getColumnCount rsmd)]
-    (while (.next result-set)
-      (conj! rows (t/read-row isql result-set column-count)))
-    (persistent! rows)))
+  ([isql ^ResultSet result-set]
+    (fetch-rows t/read-row isql result-set))
+  ([row-maker isql ^ResultSet result-set]
+    (let [rows (transient [])
+          ^ResultSetMetaData rsmd (.getMetaData result-set)
+          column-count (.getColumnCount rsmd)]
+      (while (.next result-set)
+        (conj! rows (row-maker isql result-set column-count)))
+      (persistent! rows))))
 
 
 (defn fetch-single-row
   "Given java.sql.ResultSet and asphalt.internal.ISql instances ensure result has exactly one row and fetch it using
   ISql."
-  [isql ^ResultSet result-set]
-  (if (.next result-set)
-    (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-          column-count (.getColumnCount rsmd)
-          row (t/read-row isql result-set column-count)]
-      (if (.next result-set)
-        (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
-                                    (t/get-sql isql))))
-        row))
-    (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
-                                (t/get-sql isql))))))
+  ([isql ^ResultSet result-set]
+    (fetch-single-row t/read-row isql result-set))
+  ([row-maker isql ^ResultSet result-set]
+    (if (.next result-set)
+      (let [^ResultSetMetaData rsmd (.getMetaData result-set)
+            column-count (.getColumnCount rsmd)
+            row (row-maker isql result-set column-count)]
+        (if (.next result-set)
+          (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
+                                      (t/get-sql isql))))
+          row))
+      (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
+                                  (t/get-sql isql)))))))
 
 
 (defn fetch-single-value
   "Given java.sql.ResultSet and asphalt.internal.ISql instances, ensure result has exactly one row and one column, and
   fetch it using ISql."
-  [isql ^ResultSet result-set]
-  (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-        column-count (.getColumnCount rsmd)]
-    (when (not= 1 column-count)
-      (throw (RuntimeException. (str "Expected exactly one JDBC result column but found " column-count " for SQL: "
-                                  (t/get-sql isql)))))
-    (if (.next result-set)
-      (let [column-value (t/read-col isql result-set 1)]
-        (if (.next result-set)
-          (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
-                                      (t/get-sql isql))))
-          column-value))
-      (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
-                                  (t/get-sql isql)))))))
+  ([isql ^ResultSet result-set]
+    (fetch-single-value t/read-col isql result-set))
+  ([column-reader isql ^ResultSet result-set]
+    (let [^ResultSetMetaData rsmd (.getMetaData result-set)
+          column-count (.getColumnCount rsmd)]
+      (when (not= 1 column-count)
+        (throw (RuntimeException. (str "Expected exactly one JDBC result column but found " column-count " for SQL: "
+                                    (t/get-sql isql)))))
+      (if (.next result-set)
+        (let [column-value (column-reader isql result-set 1)]
+          (if (.next result-set)
+            (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
+                                        (t/get-sql isql))))
+            column-value))
+        (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
+                                    (t/get-sql isql))))))))
 
 
 ;; ----- working with javax.sql.DataSource -----
