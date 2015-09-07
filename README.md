@@ -5,7 +5,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.1.2"]`
+Leiningen coordinates: `[asphalt "0.2.0"]`
 
 Most of what you would typically need is in the namespace `asphalt.core`, so `require` it first:
 
@@ -96,15 +96,37 @@ SQL-templates let you optionally specify the types of params and also return col
 
 ```clojure
 (a/defsql sql-insert
-  "INSERT INTO emp (name, salary, dept) VALUES ($name^string, $salary^int, $dept^string)")
+  "INSERT INTO emp (name, salary, dept) VALUES (^string $name, ^int $salary, ^string $dept)")
 
-(a/defsql sql-select "SELECT name^string, salary^int, dept^string FROM emp")
+(a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
 
-(a/defsql sql-update "UPDATE emp SET salary = $new-salary^int WHERE dept = $dept^string")
+(a/defsql sql-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
 ```
 
 The operations on the type-hinted SQL-templates remain the same as non type-hinted SQL templates, but internally the
 appropriate types are used when communicating with the JDBC driver.
+
+
+#### Supported type hints
+
+The following types are supported as type hints:
+
+`bool`
+`boolean` - duplicate of bool
+`byte`
+`byte-array`
+`date`
+`double`
+`float`
+`int`
+`integer` - duplicate of int
+`long`
+`nstring`
+`object`
+`string`
+`time`
+`timestamp`
+
 
 #### Caveats with SQL-template type hints
 

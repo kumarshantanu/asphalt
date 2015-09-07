@@ -4,12 +4,12 @@
 
 * [Idea] Transaction propagation
 * [Idea] Helpers (`defquery`, `defupdate`) to bind SQL templates with intended operations
+* [TODO] Support stored procedure call
 
 
-## 2015-August-?? / 0.2.0-SNAPSHOT
+## 0.2.0 / 2015-September-07
 
 * Expect type hints _before_ subjects, consistent with Clojure
-* [TODO] Support stored procedure call
 * New SQL abstraction: `asphalt.type.ISql`
 * ISql supports string, map and `SQLTemplate` out of the box
 * Performance improvement via primitive arrays in `SQLTemplate`
