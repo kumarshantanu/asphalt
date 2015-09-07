@@ -111,21 +111,23 @@ appropriate types are used when communicating with the JDBC driver.
 
 The following types are supported as type hints:
 
-`bool`
-`boolean` - duplicate of bool
-`byte`
-`byte-array`
-`date`
-`double`
-`float`
-`int`
-`integer` - duplicate of int
-`long`
-`nstring`
-`object`
-`string`
-`time`
-`timestamp`
+| Type       | Comments            |
+|------------|---------------------|
+|`bool`      |                     |
+|`boolean`   | duplicate of `bool` |
+|`byte`      |                     |
+|`byte-array`|                     |
+|`date`      |                     |
+|`double`    |                     |
+|`float`     |                     |
+|`int`       |                     |
+|`integer`   | duplicate of `int`  |
+|`long`      |                     |
+|`nstring`   |                     |
+|`object`    |                     |
+|`string`    |                     |
+|`time`      |                     |
+|`timestamp` |                     |
 
 
 #### Caveats with SQL-template type hints
