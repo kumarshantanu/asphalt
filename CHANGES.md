@@ -7,6 +7,11 @@
 * [TODO] Support stored procedure call
 
 
+## 0.2.1 / 2015-September -??
+
+* When error encountered setting a parameter, include parameter index/key in error message.
+
+
 ## 0.2.0 / 2015-September-07
 
 * Expect type hints _before_ subjects, consistent with Clojure

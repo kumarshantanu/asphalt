@@ -98,6 +98,7 @@
         vs2 ["Joe Coder" 110000 "Accounts"]
         upa {:new-salary 110000
              :dept "Accounts"}
+        upb [false "Accounts"]  ; bad params, first param should be int
         upv [110000 "Accounts"]]
     ;; create
     (let [generated-key (a/genkey u/ds target-sql-insert row)]
@@ -113,6 +114,9 @@
                  u/ds target-sql-selfew [(first vs1)]))))
     ;; update
     (a/update u/ds target-sql-update upa)
+    (testing "bad vector params"
+      (is (thrown? RuntimeException
+            (a/update u/ds target-sql-update upb))))
     (testing "vanilla vector params"
       (a/update u/ds target-sql-update upv))
     (is (= vs2
