@@ -9,7 +9,8 @@
 
 ## 0.2.1 / 2015-September -??
 
-* When error encountered setting a parameter, include parameter index/key in error message.
+* When error encountered setting a parameter, include parameter index/key in error message
+* Use ex-info (`ExceptionInfo`) for runtime errors
 
 
 ## 0.2.0 / 2015-September-07
