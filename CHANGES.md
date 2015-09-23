@@ -7,7 +7,7 @@
 * [TODO] Support stored procedure call
 
 
-## 0.2.1 / 2015-September -??
+## 0.2.1 / 2015-September-23
 
 * When error encountered setting a parameter, include parameter index/key in error message
 * Use ex-info (`ExceptionInfo`) for runtime errors
