@@ -56,7 +56,7 @@
 
 
 (defn fetch-rows
-  "Given a java.sql.ResultSet and asphalt.internal.ISql instances fetch a vector of rows using ISql."
+  "Given java.sql.ResultSet and asphalt.type.ISql instances fetch a vector of rows using ISql."
   ([isql ^ResultSet result-set]
     (fetch-rows t/read-row isql result-set))
   ([row-maker isql ^ResultSet result-set]
@@ -69,7 +69,7 @@
 
 
 (defn fetch-single-row
-  "Given java.sql.ResultSet and asphalt.internal.ISql instances ensure result has exactly one row and fetch it using
+  "Given java.sql.ResultSet and asphalt.type.ISql instances ensure result has exactly one row and fetch it using
   ISql."
   ([isql ^ResultSet result-set]
     (fetch-single-row t/read-row isql result-set))
@@ -89,7 +89,7 @@
 
 
 (defn fetch-single-value
-  "Given java.sql.ResultSet and asphalt.internal.ISql instances, ensure result has exactly one row and one column, and
+  "Given java.sql.ResultSet and asphalt.type.ISql instances, ensure result has exactly one row and one column, and
   fetch it using ISql."
   ([isql ^ResultSet result-set]
     (fetch-single-value t/read-col isql result-set))
