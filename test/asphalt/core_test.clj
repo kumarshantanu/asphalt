@@ -3,7 +3,9 @@
     [clojure.test :refer :all]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
-    [asphalt.type      :as t]))
+    [asphalt.type      :as t])
+  (:import
+    [clojure.lang ExceptionInfo]))
 
 
 (defn test-fixture
@@ -115,7 +117,7 @@
     ;; update
     (a/update u/ds target-sql-update upa)
     (testing "bad vector params"
-      (is (thrown? RuntimeException
+      (is (thrown? ExceptionInfo
             (a/update u/ds target-sql-update upb))))
     (testing "vanilla vector params"
       (a/update u/ds target-sql-update upv))

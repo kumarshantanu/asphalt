@@ -79,11 +79,13 @@
             column-count (.getColumnCount rsmd)
             row (row-maker isql result-set column-count)]
         (if (.next result-set)
-          (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
-                                      (t/get-sql isql))))
+          (let [sql (t/get-sql isql)]
+            (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
+                     {:sql sql})))
           row))
-      (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
-                                  (t/get-sql isql)))))))
+      (let [sql (t/get-sql isql)]
+        (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
+                 {:sql sql}))))))
 
 
 (defn fetch-single-value
@@ -95,16 +97,20 @@
     (let [^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
       (when (not= 1 column-count)
-        (throw (RuntimeException. (str "Expected exactly one JDBC result column but found " column-count " for SQL: "
-                                    (t/get-sql isql)))))
+        (let [sql (t/get-sql isql)]
+          (throw (ex-info (str "Expected exactly one JDBC result column but found " column-count " for SQL: " sql)
+                   {:column-count column-count
+                    :sql sql}))))
       (if (.next result-set)
         (let [column-value (column-reader isql result-set 1)]
           (if (.next result-set)
-            (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found more than one for SQL: "
-                                        (t/get-sql isql))))
+            (let [sql (t/get-sql isql)]
+              (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
+                       {:sql sql})))
             column-value))
-        (throw (RuntimeException. (str "Expected exactly one JDBC result row, but found no result row for SQL: "
-                                    (t/get-sql isql))))))))
+        (let [sql (t/get-sql isql)]
+          (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
+                   {:sql sql})))))))
 
 
 ;; ----- working with javax.sql.DataSource -----
