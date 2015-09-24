@@ -81,11 +81,11 @@
         (if (.next result-set)
           (let [sql (t/get-sql isql)]
             (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
-                     {:sql sql})))
+                     {:sql sql :multi? true})))
           row))
       (let [sql (t/get-sql isql)]
         (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
-                 {:sql sql}))))))
+                 {:sql sql :empty? true}))))))
 
 
 (defn fetch-single-value
@@ -106,11 +106,11 @@
           (if (.next result-set)
             (let [sql (t/get-sql isql)]
               (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
-                       {:sql sql})))
+                       {:sql sql :multi? true})))
             column-value))
         (let [sql (t/get-sql isql)]
           (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
-                   {:sql sql})))))))
+                   {:sql sql :empty? true})))))))
 
 
 ;; ----- working with javax.sql.DataSource -----
