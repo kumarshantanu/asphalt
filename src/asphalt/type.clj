@@ -26,3 +26,13 @@
 (def ^:const sql-string    11)
 (def ^:const sql-time      12)
 (def ^:const sql-timestamp 13)
+
+
+(defrecord StmtCreationEvent [^String sql
+                              ;; #{:statement :prepared-statement :prepared-call}
+                              jdbc-stmt-type])
+
+
+(defrecord SQLExecutionEvent [^boolean prepared? ^String sql
+                              ;; #{:sql :sql-query :sql-update}
+                              sql-stmt-type])

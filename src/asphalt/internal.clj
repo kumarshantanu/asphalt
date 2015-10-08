@@ -8,7 +8,8 @@
     [java.util.regex Pattern]
     [java.sql Blob Clob Date Time Timestamp
               Connection PreparedStatement Statement
-              ResultSet ResultSetMetaData]))
+              ResultSet ResultSetMetaData]
+    [asphalt.instrument JdbcEventFactory JdbcEventListener]))
 
 
 ;; ----- error reporting -----
@@ -548,3 +549,43 @@
   (set-params [sql ^PreparedStatement prepared-statement params] (set-params! prepared-statement params))
   (read-col   [sql ^ResultSet result-set ^long column-index]     (read-column-value result-set column-index))
   (read-row   [sql ^ResultSet result-set ^long column-count]     (read-columns result-set column-count)))
+
+
+;; ----- data source instrumentation -----
+
+
+(def ^JdbcEventFactory jdbc-event-factory (reify JdbcEventFactory
+                                            ;; JDBC-statement creation
+                                            (jdbcStatementCreationEvent [this]
+                                              (t/->StmtCreationEvent nil :statement))
+                                            (jdbcPreparedStatementCreationEvent [this sql]
+                                              (t/->StmtCreationEvent sql :prepared-statement))
+                                            (jdbcCallableStatementCreationEvent [this sql]
+                                              (t/->StmtCreationEvent sql :callable-statement))
+                                            ;; SQL statement execution
+                                            (sqlExecutionEventForStatement [this sql]
+                                              (t/->SQLExecutionEvent false sql :sql))
+                                            (sqlQueryExecutionEventForStatement [this sql]
+                                              (t/->SQLExecutionEvent false sql :sql-query))
+                                            (sqlUpdateExecutionEventForStatement [this sql]
+                                              (t/->SQLExecutionEvent false sql :sql-update))
+                                            ;; SQL prepared statement execution
+                                            (sqlExecutionEventForPreparedStatement [this sql]
+                                              (t/->SQLExecutionEvent true sql :sql))
+                                            (sqlQueryExecutionEventForPreparedStatement [this sql]
+                                              (t/->SQLExecutionEvent true sql :sql-query))
+                                            (sqlUpdateExecutionEventForPreparedStatement [this sql]
+                                              (t/->SQLExecutionEvent true sql :sql-update))))
+
+
+(defn make-jdbc-event-listener
+  ^JdbcEventListener [{:keys [before on-success on-error lastly]
+                       :or {before     (fn [event])
+                            on-success (fn [^String id ^long nanos event])
+                            on-error   (fn [^String id ^long nanos event ^Exception error])
+                            lastly     (fn [^String id ^long nanos event])}}]
+  (reify JdbcEventListener
+    (before    [this event]                (before     event))
+    (onSuccess [this id nanos event]       (on-success id nanos event))
+    (onError   [this id nanos event error] (on-error   id nanos event error))
+    (lastly    [this id nanos event]       (lastly     id nanos event))))

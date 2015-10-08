@@ -7,6 +7,13 @@
 * [TODO] Support stored procedure call
 
 
+## 0.3.0 / 2015-October-??
+
+* Logic errors now throw `clojure.lang.ExceptionInfo` with meta data
+* Pervasive instrumentation of `javax.sql.DataSource` objects
+* [TODO] Helper macro `defquery` to bind SQL templates to intended operations
+
+
 ## 0.2.1 / 2015-September-23
 
 * When error encountered setting a parameter, include parameter index/key in error message

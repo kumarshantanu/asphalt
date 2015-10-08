@@ -8,7 +8,35 @@
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement
                ResultSet ResultSetMetaData]
-    [javax.sql DataSource]))
+    [javax.sql DataSource]
+    [asphalt.instrument JdbcEventListener]
+    [asphalt.instrument.wrapper DataSourceWrapper]))
+
+
+(defn instrument-datasource
+  "Make instrumented javax.sql.DataSource instance using statement-creation and SQL-execution listeners.
+
+  Option :stmt-creation corresponds to a map containing the following fns, triggered when JDBC statements are created:
+  {:before     (fn [^asphalt.type.StmtCreationEvent event])
+   :on-success (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event])
+   :on-error   (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event ^Exception error])
+   :lastly     (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event])}
+
+  Option :sql-execution corresponds to a map containing the following fns, triggered when SQL statements are executed:
+  {:before     (fn [^asphalt.type.SQLExecutionEvent event])
+   :on-success (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])
+   :on-error   (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event ^Exception error])
+   :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
+  ^javax.sql.DataSource [^DataSource ds {:keys [stmt-creation sql-execution]
+                                         :or {stmt-creation JdbcEventListener/NOP
+                                              sql-execution      JdbcEventListener/NOP}}]
+  (let [stmt-creation-listener (if (instance? JdbcEventListener stmt-creation)
+                                 stmt-creation
+                                 (i/make-jdbc-event-listener stmt-creation))
+        sql-execution-listener (if (instance? JdbcEventListener sql-execution)
+                                 sql-execution
+                                 (i/make-jdbc-event-listener sql-execution))]
+    (DataSourceWrapper. ds i/jdbc-event-factory stmt-creation-listener sql-execution-listener)))
 
 
 ;; ----- parse SQL for named parameters and types -----
