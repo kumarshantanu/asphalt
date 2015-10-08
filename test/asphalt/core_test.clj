@@ -5,6 +5,7 @@
     [asphalt.core      :as a]
     [asphalt.type      :as t])
   (:import
+    [java.sql SQLTimeoutException]
     [clojure.lang ExceptionInfo]))
 
 
@@ -268,3 +269,13 @@
 
 (deftest test-transaction-rollback-map
   (transaction-rollback-helper m-all))
+
+
+(deftest test-query-timeout
+  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+        row (zipmap [:name :salary :dept] vs1)]
+    (let [generated-key (a/genkey u/delay-ds t-insert row)]
+      (is (= 1 generated-key) "Verify that insertion generated a key"))
+    (is (thrown? SQLTimeoutException
+          (a/query (a/set-params-with-query-timeout 1) a/fetch-single-value
+            u/delay-ds t-count [])) "Query should throw exception on delay")))

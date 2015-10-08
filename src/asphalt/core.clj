@@ -322,6 +322,15 @@
 ;; ----- convenience functions and macros -----
 
 
+(defn set-params-with-query-timeout
+  "Return a params setter fn usable with asphalt.core/query, that times out on query execution and throws a
+  java.sql.SQLTimeoutException instance. Supported by JDBC 4.0 (and higher) drivers only."
+  [^long n-seconds]
+  (fn [sql-or-template ^PreparedStatement pstmt params]
+    (.setQueryTimeout pstmt n-seconds)
+    (t/set-params sql-or-template pstmt params)))
+
+
 (defmacro defquery
   "Compose a SQL query template and a fetch fn into a convenience arity-2 (data-source-or-connection, params) fn.
   Option map may include :params-setter corresponding to an arity-3 fn for setting query parameters."

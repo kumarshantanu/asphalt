@@ -12,7 +12,7 @@
 * Logic errors now throw `clojure.lang.ExceptionInfo` with meta data
 * Pervasive instrumentation of `javax.sql.DataSource` objects
 * Helper macro `defquery` to bind SQL templates to intended operations
-* [TODO] Helper fn `set-params-with-timeout` as `set-params` replacement
+* Helper fn `set-params-with-query-timeout` as `set-params` replacement
 
 
 ## 0.2.1 / 2015-September-23
