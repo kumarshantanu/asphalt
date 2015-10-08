@@ -38,6 +38,9 @@
 
 (a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept FROM emp WHERE name = ?")
 
+(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept FROM emp WHERE name = ?"
+  a/fetch-single-row {})
+
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
 
 (a/defsql t-delete "DELETE FROM emp")
@@ -114,6 +117,7 @@
     (is (= vs1
           (vec (a/query a/fetch-single-row
                  u/ds target-sql-selfew [(first vs1)]))))
+    (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (a/update u/ds target-sql-update upa)
     (testing "bad vector params"

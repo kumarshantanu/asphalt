@@ -317,3 +317,23 @@
           (params-setter sql-or-template pstmt params)
           (.addBatch pstmt))
         (vec (.executeBatch pstmt))))))
+
+
+;; ----- convenience functions and macros -----
+
+
+(defmacro defquery
+  "Compose a SQL query template and a fetch fn into a convenience arity-2 (data-source-or-connection, params) fn.
+  Option map may include :params-setter corresponding to an arity-3 fn for setting query parameters."
+  ([var-symbol sql result-set-worker]
+    `(defquery ~var-symbol ~sql ~result-set-worker {}))
+  ([var-symbol sql result-set-worker options]
+    (let [sql-template-sym (gensym "sql-template-")]
+      `(let [~sql-template-sym (parse-sql ~sql ~options)
+             query-fetch# (if-let [params-setter# (:params-setter ~options)]
+                            (partial query params-setter# ~result-set-worker)
+                            (partial query ~result-set-worker))]
+         (defn ~var-symbol
+           ~(str "Execute SQL query using fetch fn " result-set-worker)
+           [data-source-or-connection# params#]
+           (query-fetch# data-source-or-connection# ~sql-template-sym params#))))))
