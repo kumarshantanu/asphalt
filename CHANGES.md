@@ -3,12 +3,12 @@
 ## TODO and Ideas
 
 * [Idea] Transaction propagation
-* [Idea] Helpers (`defquery`, `defupdate`) to bind SQL templates with intended operations
 * [TODO] Support stored procedure call
 
 
-## 0.3.0 / 2015-October-??
+## 0.3.0 / 2015-October-08
 
+* Require Java 7 due to DataSource instrumentation
 * Logic errors now throw `clojure.lang.ExceptionInfo` with meta data
 * Pervasive instrumentation of `javax.sql.DataSource` objects
 * Helper macro `defquery` to bind SQL templates to intended operations

@@ -5,7 +5,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.2.1"]`
+Leiningen coordinates: `[asphalt "0.3.0"]` (version 0.3.0 requires Java 7 or higher)
 
 Most of what you would typically need is in the namespace `asphalt.core`, so `require` it first:
 
@@ -138,6 +138,28 @@ The following types are supported as type hints:
   every return column type as in `SELECT * ^int ^string ^int ^date` if the return columns are of that type.
 - Queries that use `UNION` are also tricky to use with return column type hints. You should hint only one set of
   return columns, not in every `UNION` sub-query.
+
+### Query shorthand
+
+A SQL query always need a fetch function to retrieve the result rows. You can associate a fetch function with SQL
+queries. See example below:
+
+```clojure
+(a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
+
+(a/query a/fetch-rows
+  data-source sql-select [])
+```
+
+The above can be expressed as follows:
+
+```clojure
+(a/defquery sql-select  ; <- this defines a fn named sql-select
+  "SELECT ^string name, ^int salary, ^string dept FROM emp"
+  a/fetch-rows)
+
+(sql-select data-source [])
+```
 
 ### Transactions
 
