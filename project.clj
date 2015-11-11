@@ -1,4 +1,4 @@
-(defproject asphalt "0.3.0"
+(defproject asphalt "0.4.0-SNAPSHOT"
   :description "A Clojure library for JDBC access"
   :url "https://github.com/kumarshantanu/asphalt"
   :license {:name "Eclipse Public License"
@@ -10,6 +10,8 @@
                                   [com.h2database/h2 "1.3.176"]]}
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :c17 {:dependencies [[org.clojure/clojure "1.7.0"]]
+                   :global-vars {*unchecked-math* :warn-on-boxed}}
+             :c18 {:dependencies [[org.clojure/clojure "1.8.0-RC1"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :perf {:dependencies [[citius "0.2.2"]
                                    [org.clojure/java.jdbc "0.4.1"]]
