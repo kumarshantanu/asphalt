@@ -11,8 +11,9 @@
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :c17 {:dependencies [[org.clojure/clojure "1.7.0"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
-             :c18 {:dependencies [[org.clojure/clojure "1.8.0-RC1"]]
+             :c18 {:dependencies [[org.clojure/clojure "1.8.0-RC2"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
+             :dlnk {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.2"]
                                    [org.clojure/java.jdbc "0.4.1"]]
                     :test-paths ["perf"]}}
