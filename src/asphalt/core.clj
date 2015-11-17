@@ -186,7 +186,7 @@
         (let [^Connection connection data-source-or-connection]
           (.setAutoCommit connection false)
           (when-not (nil? transaction-isolation)
-            (.setTransactionIsolation connection ^int (i/resolve-txn-isolation transaction-isolation)))
+            (.setTransactionIsolation connection (i/resolve-txn-isolation transaction-isolation)))
           (try
             (let [result (connection-worker connection)]
               (.commit connection)
@@ -220,7 +220,7 @@
     (if (instance? DataSource data-source)
       (with-open [^Connection connection (.getConnection ^DataSource data-source)]
         (.setAutoCommit connection false)
-        (.setTransactionIsolation connection ^int (i/resolve-txn-isolation isolation))
+        (.setTransactionIsolation connection (i/resolve-txn-isolation isolation))
         (try
           (let [result (f connection)]
             (.commit connection)
