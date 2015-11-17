@@ -7,6 +7,7 @@
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
   :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.10"]
                                   [clj-dbcp "0.8.1"]
+                                  [simple-jndi "0.11.4.1"]
                                   [com.h2database/h2 "1.3.176"]]}
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :c17 {:dependencies [[org.clojure/clojure "1.7.0"]]

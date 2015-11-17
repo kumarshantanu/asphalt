@@ -141,33 +141,22 @@
                    {:sql sql :empty? true})))))))
 
 
-;; ----- working with javax.sql.DataSource -----
-
-
-(defn invoke-with-connection
-  "Obtain java.sql.Connection object from specified data-source, calling connection-worker (arity-1 function that
-  accepts java.sql.Connection object) with the connection as argument. Close the connection in the end."
-  [connection-worker data-source-or-connection]
-  (cond
-    (instance? DataSource
-      data-source-or-connection) (with-open [^Connection connection (.getConnection
-                                                                      ^DataSource data-source-or-connection)]
-                                   (connection-worker connection))
-    (instance? Connection
-      data-source-or-connection) (connection-worker ^Connection data-source-or-connection)
-    :otherwise                   (i/unexpected "javax.sql.DataSource or java.sql.Connection instance"
-                                   data-source-or-connection)))
+;; ----- working with asphalt.type.IConnectionSource -----
 
 
 (defmacro with-connection
-  "Bind `connection` (symbol) to a connection obtained from specified data-source, evaluating the body of code in that
-  context. Close connection in the end.
-  See also: invoke-with-connection"
-  [[connection data-source] & body]
+  "Bind `connection` (symbol) to a connection obtained from specified source, evaluating the body of code in that
+  context. Return connection in the end."
+  [[connection connection-source] & body]
   (when-not (symbol? connection)
     (i/unexpected "a symbol" connection))
-  `(invoke-with-connection
-     (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~data-source))
+  `(let [conn-source# ~connection-source
+         ~(if (:tag (meta connection))
+            connection
+            (vary-meta connection assoc :tag java.sql.Connection)) (t/obtain-connection conn-source#)]
+     (try ~@body
+       (finally
+         (t/return-connection conn-source# ~connection)))))
 
 
 ;; ----- transactions -----
@@ -179,75 +168,68 @@
   ([connection-worker]
     (wrap-transaction connection-worker nil))
   ([connection-worker transaction-isolation]
-    (fn wrapper [data-source-or-connection]
-      (if (instance? DataSource data-source-or-connection)
-        (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
-          (wrapper connection))
-        (let [^Connection connection data-source-or-connection]
-          (.setAutoCommit connection false)
-          (when-not (nil? transaction-isolation)
-            (.setTransactionIsolation connection (i/resolve-txn-isolation transaction-isolation)))
-          (try
-            (let [result (connection-worker connection)]
-              (.commit connection)
-              result)
-            (catch Exception e
-              (try
-                (.rollback connection)
-                (catch Exception _)) ; ignore auto-rollback exceptions
-              (throw e))))))))
+    (fn wrapper [connection-source]
+      (with-connection [^Connection connection connection-source]
+        (.setAutoCommit connection false)
+        (when-not (nil? transaction-isolation)
+          (.setTransactionIsolation connection (i/resolve-txn-isolation transaction-isolation)))
+        (try
+          (let [result (connection-worker connection)]
+            (.commit connection)
+            result)
+          (catch Exception e
+            (try
+              (.rollback connection)
+              (catch Exception _)) ; ignore auto-rollback exceptions
+            (throw e)))))))
 
 
 (defn invoke-with-transaction
-  "Obtain java.sql.Connection object from specified data-source, setup a transaction calling f with the connection as
+  "Obtain java.sql.Connection object from specified source, setup a transaction calling f with the connection as
   argument. Close the connection in the end and return what f returned. Transaction is committed if f returns normally,
   rolled back in the case of any exception."
-  ([f ^DataSource data-source]
-    (if (instance? DataSource data-source)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source)]
-        (.setAutoCommit connection false)
-        (try
-          (let [result (f connection)]
-            (.commit connection)
-            result)
-          (catch Exception e
-            (try
-              (.rollback connection)
-              (catch Exception _)) ; ignore auto-rollback exceptions
-            (throw e))))
-      (i/unexpected "javax.sql.DataSource instance" data-source)))
-  ([f ^DataSource data-source isolation]
-    (if (instance? DataSource data-source)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source)]
-        (.setAutoCommit connection false)
-        (.setTransactionIsolation connection (i/resolve-txn-isolation isolation))
-        (try
-          (let [result (f connection)]
-            (.commit connection)
-            result)
-          (catch Exception e
-            (try
-              (.rollback connection)
-              (catch Exception _)) ; ignore auto-rollback exceptions
-            (throw e))))
-      (i/unexpected "javax.sql.DataSource instance" data-source))))
+  ([f connection-source]
+    (with-connection [^Connection connection connection-source]
+      (.setAutoCommit connection false)
+      (try
+        (let [result (f connection)]
+          (.commit connection)
+          result)
+        (catch Exception e
+          (try
+            (.rollback connection)
+            (catch Exception _)) ; ignore auto-rollback exceptions
+          (throw e)))))
+  ([f connection-source isolation]
+    (with-connection [^Connection connection connection-source]
+      (.setAutoCommit connection false)
+      (.setTransactionIsolation connection (i/resolve-txn-isolation isolation))
+      (try
+        (let [result (f connection)]
+          (.commit connection)
+          result)
+        (catch Exception e
+          (try
+            (.rollback connection)
+            (catch Exception _)) ; ignore auto-rollback exceptions
+          (throw e))))))
 
 
 (defmacro with-transaction
-  "Bind `connection` (symbol) to a connection obtained from specified data-source, setup a transaction evaluating the
+  "Bind `connection` (symbol) to a connection obtained from specified source, setup a transaction evaluating the
   body of code in that context. Close connection in the end. Transaction is committed if the code returns normally,
   rolled back in the case of any exception.
   See also: invoke-with-transaction"
-  ([[connection data-source] expr]
+  ([[connection connection-source] expr]
     (when-not (symbol? connection)
       (i/unexpected "a symbol" connection))
     `(invoke-with-transaction
-       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~expr) ~data-source))
-  ([[connection data-source] isolation & body]
+       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~expr) ~connection-source))
+  ([[connection connection-source] isolation & body]
     (when-not (symbol? connection)
       (i/unexpected "a symbol" connection))
     `(invoke-with-transaction
-       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~data-source ~isolation)))
+       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~connection-source ~isolation)))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----
@@ -257,13 +239,11 @@
   "Execute query with params and process the java.sql.ResultSet instance with result-set-worker. The java.sql.ResultSet
   instance is closed in the end, so result-set-worker should neither close it nor make a direct/indirect reference to
   it in the value it returns."
-  ([result-set-worker data-source-or-connection sql-or-template params]
-    (query t/set-params result-set-worker data-source-or-connection sql-or-template params))
-  ([params-setter result-set-worker data-source-or-connection sql-or-template params]
-    (if (instance? DataSource data-source-or-connection)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
-        (query params-setter result-set-worker connection sql-or-template params))
-      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+  ([result-set-worker connection-source sql-or-template params]
+    (query t/set-params result-set-worker connection-source sql-or-template params))
+  ([params-setter result-set-worker connection-source sql-or-template params]
+    (with-connection [connection connection-source]
+      (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (params-setter sql-or-template pstmt params)
         (with-open [^ResultSet result-set (.executeQuery pstmt)]
@@ -273,15 +253,13 @@
 (defn genkey
   "Execute an update statement returning the keys generated by the statement. The generated keys are extracted from a
   java.sql.ResultSet instance using the optional result-set-worker argument."
-  ([data-source-or-connection sql-or-template params]
-    (genkey t/set-params fetch-single-value data-source-or-connection sql-or-template params))
-  ([result-set-worker data-source-or-connection sql-or-template params]
-    (genkey t/set-params result-set-worker data-source-or-connection sql-or-template params))
-  ([params-setter result-set-worker data-source-or-connection sql-or-template params]
-    (if (instance? DataSource data-source-or-connection)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
-        (genkey params-setter result-set-worker connection sql-or-template params))
-      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+  ([connection-source sql-or-template params]
+    (genkey t/set-params fetch-single-value connection-source sql-or-template params))
+  ([result-set-worker connection-source sql-or-template params]
+    (genkey t/set-params result-set-worker connection-source sql-or-template params))
+  ([params-setter result-set-worker connection-source sql-or-template params]
+    (with-connection [connection connection-source]
+      (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) true)]
         (params-setter sql-or-template pstmt params)
         (.executeUpdate pstmt)
@@ -291,13 +269,11 @@
 
 (defn update
   "Execute an update statement returning the number of rows impacted."
-  ([data-source-or-connection sql-or-template params]
-    (update t/set-params data-source-or-connection sql-or-template params))
-  ([params-setter data-source-or-connection sql-or-template params]
-    (if (instance? DataSource data-source-or-connection)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
-        (update params-setter connection sql-or-template params))
-      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+  ([connection-source sql-or-template params]
+    (update t/set-params connection-source sql-or-template params))
+  ([params-setter connection-source sql-or-template params]
+    (with-connection [connection connection-source]
+      (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (params-setter sql-or-template pstmt params)
         (.executeUpdate pstmt)))))
@@ -305,13 +281,11 @@
 
 (defn batch-update
   "Execute a SQL write statement with a batch of parameters returning the number of rows updated as a vector."
-  ([data-source-or-connection sql-or-template batch-params]
-    (batch-update t/set-params data-source-or-connection sql-or-template batch-params))
-  ([params-setter data-source-or-connection sql-or-template batch-params]
-    (if (instance? DataSource data-source-or-connection)
-      (with-open [^Connection connection (.getConnection ^DataSource data-source-or-connection)]
-        (batch-update params-setter connection sql-or-template batch-params))
-      (with-open [^PreparedStatement pstmt (i/prepare-statement ^Connection data-source-or-connection
+  ([connection-source sql-or-template batch-params]
+    (batch-update t/set-params connection-source sql-or-template batch-params))
+  ([params-setter connection-source sql-or-template batch-params]
+    (with-connection [connection connection-source]
+      (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (doseq [params batch-params]
           (params-setter sql-or-template pstmt params)

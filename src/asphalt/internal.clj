@@ -4,11 +4,14 @@
     [clojure.string :as str]
     [asphalt.type   :as t])
   (:import
-    [java.io Writer]
+    [java.io         Writer]
+    [java.sql        Blob Clob Date Time Timestamp
+                     Connection DriverManager PreparedStatement Statement
+                     ResultSet ResultSetMetaData]
+    [java.util       Hashtable Map Properties]
     [java.util.regex Pattern]
-    [java.sql Blob Clob Date Time Timestamp
-              Connection PreparedStatement Statement
-              ResultSet ResultSetMetaData]
+    [javax.naming    Context InitialContext]
+    [javax.sql       DataSource]
     [asphalt.instrument JdbcEventFactory JdbcEventListener]))
 
 
@@ -62,6 +65,13 @@
       (when (and (seq ~iteratee) ~@more-seq)
         (do ~@body)
         (recur (unchecked-inc ~counter) (rest ~iteratee) ~@more-rest)))))
+
+
+(defn as-str
+  ^String [x]
+  (if (instance? clojure.lang.Named x)
+    (name x)
+    (str x)))
 
 
 ;; ----- type definitions -----
@@ -479,6 +489,59 @@
 
 
 ;; ----- protocol stuff -----
+
+
+(extend-protocol t/IConnectionSource
+  java.sql.Connection
+  (obtain-connection      [this] this)
+  (return-connection [this conn] (comment "do nothing"))
+  javax.sql.DataSource
+  (obtain-connection      [this] (.getConnection ^DataSource this))
+  (return-connection [this conn] (.close ^Connection conn))
+  java.util.Map
+  (obtain-connection      [this] (let [{:keys [connection
+                                               factory
+                                               classname connection-uri
+                                               subprotocol subname
+                                               datasource username user password
+                                               name context environment]} this]
+                                   (cond
+                                     connection           connection
+                                     factory              (factory (dissoc this :factory))
+                                     (or (and datasource username password)
+                                       (and datasource
+                                         user password))  (.getConnection ^DataSource datasource
+                                                            ^String (or username user) ^String password)
+                                     datasource           (.getConnection ^DataSource datasource)
+                                     (or (and connection-uri username password)
+                                       (and connection-uri
+                                         user password))  (do
+                                                            (when classname
+                                                              (Class/forName ^String classname))
+                                                            (DriverManager/getConnection connection-uri
+                                                              ^String (or username user) ^String password))
+                                     connection-uri       (do
+                                                            (when classname
+                                                              (Class/forName ^String classname))
+                                                            (DriverManager/getConnection connection-uri))
+                                     (and subprotocol
+                                       subname)           (let [url (format "jdbc:%s:%s" subprotocol subname)
+                                                                cfg (dissoc this :classname :subprotocol :subname)]
+                                                            (when classname
+                                                              (Class/forName classname))
+                                                            (DriverManager/getConnection
+                                                              url (let [p (Properties.)]
+                                                                    (doseq [[k v] (seq cfg)]
+                                                                      (.setProperty p (as-str k) v))
+                                                                    p)))
+                                     name                 (let [^Context c (or context
+                                                                             (InitialContext.
+                                                                               (and environment
+                                                                                 (Hashtable. ^Map environment))))
+                                                                ^DataSource d (.lookup c ^String name)]
+                                                            (.getConnection d)))))
+  (return-connection [this conn] (when-not (:connection this)
+                                   (.close ^Connection conn))))
 
 
 (defrecord SQLTemplate

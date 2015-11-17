@@ -6,6 +6,19 @@
 * [TODO] Support stored procedure call
 
 
+## 0.4.0 / 2015-????-??
+
+* JDBC connections are obtained from and returned to an abstraction `asphalt.type.IConnectionSource`
+  * Extends to `java.sql.Connection` and `javax.sql.DataSource` (already supported)
+  * Extends to map for [clojure/java.jdbc](https://github.com/clojure/java.jdbc) compatibility (new feature)
+* [TODO] Instrumentation endpoint `instrument-connection-source` for `asphalt.type.IConnectionSource` operations
+* [TODO] Params setter can be specified via `defsql`
+* [TODO] New macros - `defgenkey`, `defupdate`
+* [TODO] Overhauled transaction API
+  * [TODO] Accepts an option map (keys `:result-success?`, `:error-failure?`, `:isolation`) as first argument
+  * [TODO] Nested transactions support (savepoint management)
+
+
 ## 0.3.0 / 2015-October-08
 
 * Require Java 7 due to DataSource instrumentation
