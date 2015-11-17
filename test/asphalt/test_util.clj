@@ -44,10 +44,17 @@
 
 
 (def ds
-  (a/instrument-datasource
+  (a/instrument-connection-source
     orig-ds
-    #_{}  ; uncomment this (and comment out the following) for debugging
-    {:stmt-creation {:before     (fn [^StmtCreationEvent event]
+    {:conn-creation {:before     (fn [event]
+                                   (echoln "Before:-" event))
+                     :on-success (fn [^String id ^long nanos event]
+                                   (echoln "Success:- ID:" id "- nanos:" nanos "-" event))
+                     :on-error   (fn [^String id ^long nanos event ^Exception error]
+                                   (echoln "Error:- ID:" id "- nanos:" nanos "-" event "- error:" error))
+                     :lastly     (fn [^String id ^long nanos event]
+                                   (echoln "Lastly:- ID:" id "- nanos:" nanos "-" event))}
+     :stmt-creation {:before     (fn [^StmtCreationEvent event]
                                    (echoln "Before:-" event))
                      :on-success (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event]
                                    (echoln "Success:- ID:" id "- nanos:" nanos "-" event))
@@ -66,9 +73,21 @@
 
 
 (def delay-ds
-  (a/instrument-datasource
+  (a/instrument-connection-source
     orig-ds
-    {:stmt-creation {:before     (fn [^StmtCreationEvent event]
+    {:conn-creation {:before     (fn [event]
+                                   (echoln "Before:-" event)
+                                   (sleep))
+                     :on-success (fn [^String id ^long nanos event]
+                                   (echoln "Success:- ID:" id "- nanos:" nanos "-" event)
+                                   (sleep))
+                     :on-error   (fn [^String id ^long nanos event ^Exception error]
+                                   (echoln "Error:- ID:" id "- nanos:" nanos "-" event "- error:" error)
+                                   (sleep))
+                     :lastly     (fn [^String id ^long nanos event]
+                                   (echoln "Lastly:- ID:" id "- nanos:" nanos "-" event)
+                                   (sleep))}
+     :stmt-creation {:before     (fn [^StmtCreationEvent event]
                                    (echoln "Before:-" event)
                                    (sleep))
                      :on-success (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event]

@@ -11,7 +11,8 @@
 * JDBC connections are obtained from and returned to an abstraction `asphalt.type.IConnectionSource`
   * Extends to `java.sql.Connection` and `javax.sql.DataSource` (already supported)
   * Extends to map for [clojure/java.jdbc](https://github.com/clojure/java.jdbc) compatibility (new feature)
-* [TODO] Instrumentation endpoint `instrument-connection-source` for `asphalt.type.IConnectionSource` operations
+* Instrumentation endpoint `instrument-connection-source` for creating JDBC connections
+  * [TODO] Deprecate/remove `instrument-datasource`
 * [TODO] Params setter can be specified via `defsql`
 * [TODO] New macros - `defgenkey`, `defupdate`
 * [TODO] Overhauled transaction API

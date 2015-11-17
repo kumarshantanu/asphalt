@@ -10,7 +10,61 @@
                ResultSet ResultSetMetaData]
     [javax.sql DataSource]
     [asphalt.instrument JdbcEventListener]
-    [asphalt.instrument.wrapper DataSourceWrapper]))
+    [asphalt.instrument.wrapper ConnectionWrapper DataSourceWrapper]))
+
+
+;; ----- instrumentation -----
+
+
+(defn instrument-connection-source
+  "Make instrumented connection source using connection-creation, statement-creation and SQL-execution listeners.
+
+  Option :conn-creation corresponds to a map containing the following fns, triggered when JDBC connections are created:
+  ;; event = :jdbc-connection-creation-event
+  {:before     (fn [event])
+   :on-success (fn [^String id ^long nanos event])
+   :on-error   (fn [^String id ^long nanos event ^Exception error])
+   :lastly     (fn [^String id ^long nanos event])}
+
+  Option :stmt-creation corresponds to a map containing the following fns, triggered when JDBC statements are created:
+  {:before     (fn [^asphalt.type.StmtCreationEvent event])
+   :on-success (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event])
+   :on-error   (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event ^Exception error])
+   :lastly     (fn [^String id ^long nanos ^asphalt.type.StmtCreationEvent event])}
+
+  Option :sql-execution corresponds to a map containing the following fns, triggered when SQL statements are executed:
+  {:before     (fn [^asphalt.type.SQLExecutionEvent event])
+   :on-success (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])
+   :on-error   (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event ^Exception error])
+   :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
+  [connection-source {:keys [conn-creation stmt-creation sql-execution]
+                      :or {conn-creation JdbcEventListener/NOP
+                           stmt-creation  JdbcEventListener/NOP
+                           sql-execution  JdbcEventListener/NOP}}]
+  (let [as-jdbc-event-listener (fn [x] (if (instance? JdbcEventListener x) x
+                                         (i/make-jdbc-event-listener x)))
+        ^JdbcEventListener conn-creation-listener (as-jdbc-event-listener conn-creation)
+        ^JdbcEventListener stmt-creation-listener (as-jdbc-event-listener stmt-creation)
+        ^JdbcEventListener sql-execution-listener (as-jdbc-event-listener sql-execution)
+        nanos-now (fn (^long [] (System/nanoTime))
+                    (^long [^long start] (- (System/nanoTime) start)))]
+    (reify t/IConnectionSource
+      (obtain-connection            [this] (let [event :jdbc-connection-creation-event
+                                                 ^String id (.before conn-creation-listener event)
+                                                 start (nanos-now)]
+                                             (try
+                                               (let [result (ConnectionWrapper.
+                                                              (t/obtain-connection connection-source)
+                                                              i/jdbc-event-factory
+                                                              stmt-creation-listener sql-execution-listener)]
+                                                 (.onSuccess conn-creation-listener id (nanos-now start) event)
+                                                 result)
+                                               (catch Exception e
+                                                 (.onError conn-creation-listener id (nanos-now start) event e)
+                                                 (throw e))
+                                               (finally
+                                                 (.lastly conn-creation-listener id (nanos-now start) event)))))
+      (return-connection [this connection] (t/return-connection connection-source connection)))))
 
 
 (defn instrument-datasource
