@@ -17,19 +17,22 @@
 
 (defn echoln
   [& args]
-  (when true
+  (when (when-let [verbose (System/getenv "ASPHALT_VERBOSE")]
+          (Boolean/parseBoolean verbose))
     (apply println "[Echo] " args)))
 
 
 (defn sleep
   ([^long millis]
-    (try (Thread/sleep millis)
-      (catch InterruptedException e
-        (.interrupt (Thread/currentThread)))))
+    (when (when-let [verbose (System/getenv "ASPHALT_DELAY")]
+            (Boolean/parseBoolean verbose))
+      (print "Sleeping" millis "ms...")
+      (try (Thread/sleep millis)
+        (catch InterruptedException e
+          (.interrupt (Thread/currentThread))))
+      (println "woke up.")))
   ([]
-    (print "Sleeping 1000ms...")
-    (sleep 1000)
-    (println "woke up.")))
+    (sleep 1000)))
 
 
 (def config (->> (io/resource "database.edn")
