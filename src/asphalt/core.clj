@@ -7,7 +7,8 @@
   (:import
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement
-               ResultSet ResultSetMetaData]
+               ResultSet ResultSetMetaData
+               Savepoint]
     [javax.sql DataSource]
     [asphalt.instrument JdbcEventListener]
     [asphalt.instrument.wrapper ConnectionWrapper DataSourceWrapper]))
@@ -216,74 +217,51 @@
 ;; ----- transactions -----
 
 
-(defn wrap-transaction
-  "Given an arity-1 connection-worker fn, wrap it such that it prepares the specified transaction context on the
-  java.sql.Connection argument first."
-  ([connection-worker]
-    (wrap-transaction connection-worker nil))
-  ([connection-worker transaction-isolation]
-    (fn wrapper [connection-source]
-      (with-connection [^Connection connection connection-source]
-        (.setAutoCommit connection false)
-        (when-not (nil? transaction-isolation)
-          (.setTransactionIsolation connection (i/resolve-txn-isolation transaction-isolation)))
-        (try
-          (let [result (connection-worker connection)]
-            (.commit connection)
-            result)
-          (catch Exception e
-            (try
-              (.rollback connection)
-              (catch Exception _)) ; ignore auto-rollback exceptions
-            (throw e)))))))
-
-
 (defn invoke-with-transaction
-  "Obtain java.sql.Connection object from specified source, setup a transaction calling f with the connection as
-  argument. Close the connection in the end and return what f returned. Transaction is committed if f returns normally,
-  rolled back in the case of any exception."
-  ([f connection-source]
-    (with-connection [^Connection connection connection-source]
-      (.setAutoCommit connection false)
-      (try
-        (let [result (f connection)]
-          (.commit connection)
-          result)
-        (catch Exception e
-          (try
-            (.rollback connection)
-            (catch Exception _)) ; ignore auto-rollback exceptions
-          (throw e)))))
-  ([f connection-source isolation]
-    (with-connection [^Connection connection connection-source]
-      (.setAutoCommit connection false)
-      (.setTransactionIsolation connection (i/resolve-txn-isolation isolation))
-      (try
-        (let [result (f connection)]
-          (.commit connection)
-          result)
-        (catch Exception e
-          (try
-            (.rollback connection)
-            (catch Exception _)) ; ignore auto-rollback exceptions
-          (throw e))))))
+  [f connection-source {:keys [use-savepoint? success-result? failure-error? isolation]
+                        :or {use-savepoint?  true
+                             success-result? (fn [result] true)
+                             failure-error?  (fn [error] true)}
+                        :as options}]
+  (with-connection [^Connection connection connection-source]
+    (let [restore-auto-commit? (.getAutoCommit connection)
+          restore-isolation    (.getTransactionIsolation connection)]
+      (when restore-auto-commit?
+        (.setAutoCommit connection false))
+      (when isolation
+        (.setTransactionIsolation connection (i/resolve-txn-isolation isolation)))
+      (let [savepoint (when use-savepoint?
+                        (.setSavepoint connection))]
+        (try
+          (let [result (f connection)]
+            (i/commit-or-rollback-transaction connection (success-result? result) savepoint)
+            result)
+          (catch Throwable error
+            (try
+              (i/commit-or-rollback-transaction connection (not (failure-error? error)) savepoint)
+              (catch Exception _)) ; ignore auto-rollback exceptions
+            (throw error))
+          (finally
+            (when isolation
+              (.setTransactionIsolation connection restore-isolation))
+            (when restore-auto-commit?
+              (.setAutoCommit connection true))))))))
 
 
 (defmacro with-transaction
   "Bind `connection` (symbol) to a connection obtained from specified source, setup a transaction evaluating the
-  body of code in that context. Close connection in the end. Transaction is committed if the code returns normally,
-  rolled back in the case of any exception.
-  See also: invoke-with-transaction"
-  ([[connection connection-source] expr]
-    (when-not (symbol? connection)
-      (i/unexpected "a symbol" connection))
-    `(invoke-with-transaction
-       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~expr) ~connection-source))
-  ([[connection connection-source] isolation & body]
-    (when-not (symbol? connection)
-      (i/unexpected "a symbol" connection))
-    `(invoke-with-transaction
-       (^:once fn* [~(vary-meta connection assoc :tag java.sql.Connection)] ~@body) ~connection-source ~isolation)))
+  body of code in specified transaction context. Restore old transaction context upon exit on best effort basis.
+  Options:
+    :use-savepoint?  | Flag - whether database supports savepoints
+    :success-result? | Fn that accepts result of expr, returns true if it is a success, false otherwise
+    :failure-error?  | Fn that accepts expr exception, returns true if it is a failure, false otherwise"
+  [[connection connection-source] options & body]
+  (when-not (symbol? connection)
+    (i/unexpected "a symbol" connection))
+  `(invoke-with-transaction (^:once fn* [~(if (:tag (meta connection))
+                                            connection
+                                            (vary-meta connection assoc :tag java.sql.Connection))] ~@body)
+     ~connection-source ~options))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----

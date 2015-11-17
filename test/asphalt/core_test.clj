@@ -220,7 +220,7 @@
     ;; insert one record
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
-    (a/with-transaction [conn u/ds] :read-committed
+    (a/with-transaction [conn u/ds] {:isolation :read-committed}
       (a/update conn target-sql-update upa)
       (a/genkey conn target-sql-insert vs2))
     ;; verify result
@@ -251,7 +251,7 @@
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
     (is (thrown? IllegalStateException
-          (a/with-transaction [conn u/ds] :read-committed
+          (a/with-transaction [conn u/ds] {:isolation :read-committed}
             (a/update conn target-sql-update upa)
             (throw (IllegalStateException. "boom!"))
             (a/genkey conn target-sql-insert vs2))))

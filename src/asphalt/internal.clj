@@ -7,7 +7,8 @@
     [java.io         Writer]
     [java.sql        Blob Clob Date Time Timestamp
                      Connection DriverManager PreparedStatement Statement
-                     ResultSet ResultSetMetaData]
+                     ResultSet ResultSetMetaData
+                     Savepoint]
     [java.util       Hashtable Map Properties]
     [java.util.regex Pattern]
     [javax.naming    Context InitialContext]
@@ -486,6 +487,19 @@
                    :required
                    :requires-new
                    :supports})
+
+
+(defn commit-or-rollback-transaction
+  "Either commit or rollback a transaction. Specified savepoint may be nil."
+  [^Connection connection commit? ^Savepoint savepoint]
+  (if commit?
+    (do (.commit connection)
+      (when-not (nil? savepoint)
+        (.releaseSavepoint connection savepoint)))
+    (if (nil? savepoint)
+      (.rollback connection)
+      (do (.rollback connection savepoint)
+        (.releaseSavepoint connection savepoint)))))
 
 
 ;; ----- protocol stuff -----

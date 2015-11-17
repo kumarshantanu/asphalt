@@ -2,22 +2,24 @@
 
 ## TODO and Ideas
 
-* [Idea] Transaction propagation
+* [TODO] Transaction propagation
 * [TODO] Support stored procedure call
+* [TODO] Params setter can be specified via `defsql`
+* [TODO] New macros - `defgenkey`, `defupdate`
 
 
 ## 0.4.0 / 2015-????-??
 
+* Redundant/unwanted type hint was omitted to avoid compilation error with Clojure 1.8.0
 * JDBC connections are obtained from and returned to an abstraction `asphalt.type.IConnectionSource`
   * Extends to `java.sql.Connection` and `javax.sql.DataSource` (already supported)
   * Extends to map for [clojure/java.jdbc](https://github.com/clojure/java.jdbc) compatibility (new feature)
 * Instrumentation endpoint `instrument-connection-source` for creating JDBC connections
-  * [TODO] Deprecate/remove `instrument-datasource`
-* [TODO] Params setter can be specified via `defsql`
-* [TODO] New macros - `defgenkey`, `defupdate`
-* [TODO] Overhauled transaction API
-  * [TODO] Accepts an option map (keys `:result-success?`, `:error-failure?`, `:isolation`) as first argument
-  * [TODO] Nested transactions support (savepoint management)
+  * [TODO] Deprecate/remove `instrument-datasource` (breaking change)
+* Overhauled transaction API
+  * `with-transaction` accepts an option map as second argument (breaking change)
+  * Option keys `:result-success?`, `:error-failure?`, `:isolation`
+  * Nested transactions support (using savepoints)
 
 
 ## 0.3.0 / 2015-October-08
