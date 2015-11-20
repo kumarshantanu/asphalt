@@ -1,6 +1,6 @@
 (ns asphalt.type
   (:import
-    [java.sql PreparedStatement ResultSet]))
+    [java.sql Connection PreparedStatement ResultSet]))
 
 
 (defprotocol IConnectionSource
@@ -13,6 +13,13 @@
   (set-params [this ^PreparedStatement prepared-statement params] "Set prepared-statement params")
   (read-col   [this ^ResultSet result-set column-index] "Read column at specified index (1 based) from result-set")
   (read-row   [this ^ResultSet result-set column-count] "Read specified number of columns (starting at 1) as a row"))
+
+
+(defprotocol ITransactionPropagation
+  (begin-txn    [this ^Connection connection isolation]   "Begin transaction and return the context")
+  (commit-txn   [this ^Connection connection txn-context] "Commit current transaction")
+  (rollback-txn [this ^Connection connection txn-context] "Rollback current transaction")
+  (end-txn      [this ^Connection connection txn-context] "End transaction"))
 
 
 (def ^:const sql-nil        0)

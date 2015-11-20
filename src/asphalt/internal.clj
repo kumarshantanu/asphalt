@@ -456,6 +456,14 @@
 ;; ----- transaction stuff -----
 
 
+(defn set-txn-info
+  [^Connection connection options]
+  (when (contains? options :auto-commit?)
+    (.setAutoCommit connection (:auto-commit? options)))
+  (when (contains? options :isolation)
+    (.setTransactionIsolation connection (:isolation options))))
+
+
 (def isolation-levels #{Connection/TRANSACTION_NONE
                         Connection/TRANSACTION_READ_COMMITTED
                         Connection/TRANSACTION_READ_UNCOMMITTED
@@ -487,19 +495,6 @@
                    :required
                    :requires-new
                    :supports})
-
-
-(defn commit-or-rollback-transaction
-  "Either commit or rollback a transaction. Specified savepoint may be nil."
-  [^Connection connection commit? ^Savepoint savepoint]
-  (if commit?
-    (do (.commit connection)
-      (when-not (nil? savepoint)
-        (.releaseSavepoint connection savepoint)))
-    (if (nil? savepoint)
-      (.rollback connection)
-      (do (.rollback connection savepoint)
-        (.releaseSavepoint connection savepoint)))))
 
 
 ;; ----- protocol stuff -----

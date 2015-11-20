@@ -2,7 +2,6 @@
 
 ## TODO and Ideas
 
-* [TODO] Transaction propagation
 * [TODO] Support stored procedure call
 * [TODO] Params setter can be specified via `defsql`
 * [TODO] New macros - `defgenkey`, `defupdate`
@@ -18,7 +17,8 @@
   * [TODO] Deprecate/remove `instrument-datasource` (breaking change)
 * Overhauled transaction API
   * `with-transaction` accepts an option map as second argument (breaking change)
-  * Option keys `:result-success?`, `:error-failure?`, `:isolation`
+  * Option keys `:result-success?`, `:error-failure?`, `:isolation`, `:propagation`
+  * Transaction propagation is a first class abstraction `asphalt.type.ITransactionPropagation`
   * Nested transactions support (using savepoints)
 
 
