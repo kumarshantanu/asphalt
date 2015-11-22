@@ -49,8 +49,8 @@
    :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
   [connection-source {:keys [conn-creation stmt-creation sql-execution]
                       :or {conn-creation JdbcEventListener/NOP
-                           stmt-creation  JdbcEventListener/NOP
-                           sql-execution  JdbcEventListener/NOP}}]
+                           stmt-creation JdbcEventListener/NOP
+                           sql-execution JdbcEventListener/NOP}}]
   (let [as-jdbc-event-listener (fn [x] (if (instance? JdbcEventListener x) x
                                          (i/make-jdbc-event-listener x)))
         ^JdbcEventListener conn-creation-listener (as-jdbc-event-listener conn-creation)
@@ -275,7 +275,7 @@
     (end-txn      [this connection txn-context])))
 
 
-;; ts-not-supported -- not implemented as it requires a new connection
+;; tp-not-supported -- not implemented as it requires a new connection
 ;; "Execute non-transactionally regardless of whether a transaction exists."
 
 
@@ -299,7 +299,7 @@
     (end-txn      [this connection txn-context] (i/set-txn-info connection txn-context))))
 
 
-;; ts-requires-new -- not implemented as it requires a new connection
+;; tp-requires-new -- not implemented as it requires a new connection
 ;; "Create nested transaction if a transaction exists, create an independent transaction otherwise."
 
 
