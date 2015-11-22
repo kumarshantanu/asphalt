@@ -12,7 +12,8 @@
     [clojure.test :refer :all]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
-    [asphalt.type      :as t])
+    [asphalt.type      :as t]
+    [asphalt.transaction :as x])
   (:import
     [java.sql SQLTimeoutException]
     [clojure.lang ExceptionInfo]))
@@ -139,8 +140,7 @@
           (vec (a/query a/fetch-single-row
                  u/ds target-sql-select []))))
     ;; delete
-    (a/with-connection [conn u/ds]
-      (a/update conn target-sql-delete []))
+    (a/update u/ds target-sql-delete [])
     (is (= 0 (a/query a/fetch-single-value
                u/ds target-sql-count [])) "Verify that row was deleted")))
 
@@ -229,7 +229,7 @@
     ;; insert one record
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
-    (a/with-transaction [conn u/ds] {:isolation :read-committed}
+    (x/with-transaction [conn u/ds] {:isolation :read-committed}
       (a/update conn target-sql-update upa)
       (a/genkey conn target-sql-insert vs2))
     ;; verify result
@@ -260,7 +260,7 @@
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
     (is (thrown? IllegalStateException
-          (a/with-transaction [conn u/ds] {:isolation :read-committed}
+          (x/with-transaction [conn u/ds] {:isolation :read-committed}
             (a/update conn target-sql-update upa)
             (throw (IllegalStateException. "boom!"))
             (a/genkey conn target-sql-insert vs2))))

@@ -473,6 +473,23 @@
     (.setTransactionIsolation connection (:isolation options))))
 
 
+(defmacro with-txn-info
+  [connection txn-info & body]
+  `(let [^java.sql.Connection conn# ~connection
+         tinf# ~txn-info
+         oinf# (if (contains? tinf# :auto-commit?)
+                 {:auto-commit? (.getAutoCommit conn#)}
+                 {})
+         oinf# (if (contains? tinf# :isolation)
+                 (assoc oinf# :isolation (.getTransactionIsolation conn#))
+                 oinf#)]
+     (try
+       (set-txn-info conn# tinf#)
+       ~@body
+       (finally
+         (set-txn-info conn# oinf#)))))
+
+
 (def isolation-levels #{Connection/TRANSACTION_NONE
                         Connection/TRANSACTION_READ_COMMITTED
                         Connection/TRANSACTION_READ_UNCOMMITTED
@@ -495,28 +512,21 @@
         (class isolation) (pr-str isolation)))))
 
 
-;; Spring (and EJB) transaction propagation
-;; http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html
-(def propagation #{:mandatory
-                   :nested
-                   :never
-                   :not-supported
-                   :required
-                   :requires-new
-                   :supports})
-
-
 ;; ----- protocol stuff -----
 
 
 (extend-protocol t/IConnectionSource
   java.sql.Connection
+  (create-connection      [this] (throw (UnsupportedOperationException.
+                                          "Cannot create connection from a raw JDBC connection")))
   (obtain-connection      [this] this)
   (return-connection [this conn] (comment "do nothing"))
   javax.sql.DataSource
-  (obtain-connection      [this] (.getConnection ^DataSource this))
+  (create-connection      [this] (.getConnection ^DataSource this))
+  (obtain-connection      [this] (t/create-connection this))
   (return-connection [this conn] (.close ^Connection conn))
   java.util.Map
+  (create-connection      [this] (t/obtain-connection (dissoc this :connection)))
   (obtain-connection      [this] (let [{:keys [connection
                                                factory
                                                classname connection-uri
@@ -632,7 +642,40 @@
   (read-row   [sql ^ResultSet result-set ^long column-count]     (read-columns result-set column-count)))
 
 
-;; ----- data source instrumentation -----
+;; ----- connection source helpers -----
+
+
+(defmacro with-connection
+  "Bind `connection` (symbol) to a connection obtained from specified source, evaluating the body of code in that
+  context. Return connection to source in the end."
+  [[connection connection-source] & body]
+  (when-not (symbol? connection)
+    (unexpected "a symbol" connection))
+  `(let [conn-source# ~connection-source
+         ~(if (:tag (meta connection))
+            connection
+            (vary-meta connection assoc :tag java.sql.Connection)) (t/obtain-connection conn-source#)]
+     (try ~@body
+       (finally
+         (t/return-connection conn-source# ~connection)))))
+
+
+(defmacro with-new-connection
+  "Bind `connection` (symbol) to a connection created from specified source, evaluating the body of code in that
+  context. Return connection to source in the end."
+  [[connection connection-source] & body]
+  (when-not (symbol? connection)
+    (unexpected "a symbol" connection))
+  `(let [conn-source# ~connection-source
+         ~(if (:tag (meta connection))
+            connection
+            (vary-meta connection assoc :tag java.sql.Connection)) (t/create-connection conn-source#)]
+     (try ~@body
+       (finally
+         (t/return-connection conn-source# ~connection)))))
+
+
+;; ----- connection source instrumentation -----
 
 
 (def ^JdbcEventFactory jdbc-event-factory (reify JdbcEventFactory

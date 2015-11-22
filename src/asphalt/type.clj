@@ -13,6 +13,7 @@
 
 
 (defprotocol IConnectionSource
+  (create-connection            [this] "Create connection from the source")
   (obtain-connection            [this] "Obtain connection from the source")
   (return-connection [this connection] "Return connection to the source"))
 
@@ -25,10 +26,9 @@
 
 
 (defprotocol ITransactionPropagation
-  (begin-txn    [this ^Connection connection isolation]   "Begin transaction and return the context")
+  (execute-txn  [this connection-source txn-worker opts]  "Execute (worker connection txn-context) in a transaction")
   (commit-txn   [this ^Connection connection txn-context] "Commit current transaction")
-  (rollback-txn [this ^Connection connection txn-context] "Rollback current transaction")
-  (end-txn      [this ^Connection connection txn-context] "End transaction"))
+  (rollback-txn [this ^Connection connection txn-context] "Rollback current transaction"))
 
 
 (def ^:const sql-nil        0)

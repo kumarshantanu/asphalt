@@ -10,8 +10,9 @@
 (ns asphalt.connection-test
   (:require
     [clojure.test :refer :all]
-    [asphalt.core :as a]
-    [asphalt.type :as t])
+    [asphalt.core     :as a]
+    [asphalt.internal :as i]
+    [asphalt.type     :as t])
   (:import
     [java.sql  Connection DriverManager]
     [javax.sql DataSource]))
@@ -36,7 +37,7 @@
 (deftest test-with-connection
   (Class/forName h2-classname)
   (with-open [^Connection connection (make-connection)]
-    (a/with-connection [^Connection conn connection]
+    (i/with-connection [^Connection conn connection]
       (is (instance? Connection conn)))
     (is (not (.isClosed connection)))))
 

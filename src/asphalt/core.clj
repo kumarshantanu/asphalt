@@ -15,9 +15,7 @@
     [asphalt.internal :as i])
   (:import
     [java.util.regex Pattern]
-    [java.sql  Connection PreparedStatement
-               ResultSet ResultSetMetaData
-               Savepoint]
+    [java.sql  Connection PreparedStatement ResultSet ResultSetMetaData]
     [javax.sql DataSource]
     [asphalt.instrument JdbcEventListener]
     [asphalt.instrument.wrapper ConnectionWrapper DataSourceWrapper]))
@@ -206,158 +204,21 @@
 
 
 ;; ----- working with asphalt.type.IConnectionSource -----
-
-
-(defmacro with-connection
-  "Bind `connection` (symbol) to a connection obtained from specified source, evaluating the body of code in that
-  context. Return connection in the end."
-  [[connection connection-source] & body]
-  (when-not (symbol? connection)
-    (i/unexpected "a symbol" connection))
-  `(let [conn-source# ~connection-source
-         ~(if (:tag (meta connection))
-            connection
-            (vary-meta connection assoc :tag java.sql.Connection)) (t/obtain-connection conn-source#)]
-     (try ~@body
-       (finally
-         (t/return-connection conn-source# ~connection)))))
-
-
-;; ----- transaction propagation -----
-;; http://docs.spring.io/spring/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html
-
-
-(def ^{:doc "Use current transaction, throw exception if unavailable. Isolation is ignored."}
-     tp-mandatory
-  (reify t/ITransactionPropagation
-    (begin-txn  [this connection new-isolation] (when (.getAutoCommit ^Connection connection)
-                                                  (throw (ex-info "Expected a pre-existing transaction, but found none"
-                                                           {:txn-strategy :mandatory}))))
-    (commit-txn   [this connection txn-context] (.commit ^Connection connection))
-    (rollback-txn [this connection txn-context] (.rollback ^Connection connection))
-    (end-txn      [this connection txn-context])))
-
-
-(declare tp-required)
-
-
-(def ^{:doc "Start nested transaction if a transaction exists, behave like tp-required otherwise."}
-     tp-nested
-  (reify t/ITransactionPropagation
-    (begin-txn  [this connection new-isolation] (let [auto-commit? (.getAutoCommit ^Connection connection)
-                                                      isolation    (.getTransactionIsolation ^Connection connection)]
-                                                  (if auto-commit?
-                                                    (t/begin-txn tp-required connection new-isolation)
-                                                    (do
-                                                      (i/set-txn-info connection {:auto-commit? false
-                                                                                  :isolation    new-isolation})
-                                                      {:auto-commit? auto-commit?
-                                                       :isolation isolation
-                                                       :savepoint (.setSavepoint ^Connection connection)}))))
-    (commit-txn   [this connection txn-context] (.commit ^Connection connection))
-    (rollback-txn [this connection txn-context] (if-let [savepoint (:savepoint txn-context)]
-                                                  (.rollback ^Connection connection savepoint)
-                                                  (.rollback ^Connection connection)))
-    (end-txn      [this connection txn-context] (do
-                                                  (i/set-txn-info connection txn-context)
-                                                  (when-let [savepoint (:savepoint txn-context)]
-                                                    (.releaseSavepoint ^Connection connection savepoint))))))
-
-
-(def ^{:doc "Throw exception if a transaction exists, execute non-transactionally otherwise. Isolation is ignored."}
-     tp-never
-  (reify t/ITransactionPropagation
-    (begin-txn  [this connection new-isolation] (when-not (.getAutoCommit ^Connection connection)
-                                                  (throw (ex-info "Expected no pre-existing transaction, but found one"
-                                                           {:txn-strategy :never}))))
-    (commit-txn   [this connection txn-context])
-    (rollback-txn [this connection txn-context])
-    (end-txn      [this connection txn-context])))
-
-
-;; tp-not-supported -- not implemented as it requires a new connection
-;; "Execute non-transactionally regardless of whether a transaction exists."
-
-
-(def ^{:doc "Use current transaction if it exists, create new transaction otherwise."}
-     tp-required
-  (reify t/ITransactionPropagation
-    (begin-txn  [this connection new-isolation] (let [auto-commit? (.getAutoCommit ^Connection connection)
-                                                      isolation    (.getTransactionIsolation ^Connection connection)]
-                                                  (if auto-commit?
-                                                    (do
-                                                      (i/set-txn-info connection {:auto-commit? false
-                                                                                  :isolation    new-isolation})
-                                                      {:auto-commit? true
-                                                       :isolation    isolation})
-                                                    (do
-                                                      (i/set-txn-info connection {:isolation new-isolation})
-                                                      {:auto-commit? false
-                                                       :isolation    isolation}))))
-    (commit-txn   [this connection txn-context] (.commit ^Connection connection))
-    (rollback-txn [this connection txn-context] (.rollback ^Connection connection))
-    (end-txn      [this connection txn-context] (i/set-txn-info connection txn-context))))
-
-
-;; tp-requires-new -- not implemented as it requires a new connection
-;; "Create nested transaction if a transaction exists, create an independent transaction otherwise."
-
-
-(def ^{:doc "Use current transaction if one exists, execute non-transactionally otherwise. Isolation is ignored."}
-     tp-supports
-  (reify t/ITransactionPropagation
-    (begin-txn  [this connection new-isolation] (not (.getAutoCommit ^Connection connection)))
-    (commit-txn   [this connection txn-context] (when txn-context (.commit ^Connection connection)))
-    (rollback-txn [this connection txn-context] (when txn-context (.rollback ^Connection connection)))
-    (end-txn      [this connection txn-context])))
-
-
-;; ----- transactions -----
-
-
-(defn invoke-with-transaction
-  "Execute specified txn-worker in a transaction using connection-source and txn options:
-  Arguments:
-    txn-worker        | fn, accepts java.sql.Connection as argument
-    connection-source | instance of asphalt.type.IConnectionSource
-  Options:
-    :isolation       | either of :none, :read-committed, :read-uncommitted, :repeatable-read, :serializable
-    :propagation     | an asphalt.type.ITransactionPropagation instance (default: asphalt.core/tp-required)
-    :success-result? | fn that accepts result of txn-worker, returns true if it is a success, false otherwise
-    :failure-error?  | fn that accepts txn-worker exception, returns true if it is a failure, false otherwise"
-  [txn-worker connection-source {:keys [isolation propagation success-result? failure-error?]
-                                 :or {propagation     tp-required
-                                      success-result? (fn [result] true)
-                                      failure-error?  (fn [error] true)}
-                                 :as options}]
-  (with-connection [^Connection connection connection-source]
-    (let [txn-context (t/begin-txn propagation connection (i/resolve-txn-isolation isolation))]
-      (try
-        (let [result (txn-worker connection)]
-          (if (success-result? result)
-            (t/commit-txn propagation connection txn-context)
-            (t/rollback-txn propagation connection txn-context))
-          result)
-        (catch Throwable error
-          (if (failure-error? error)
-            (t/rollback-txn propagation connection txn-context)
-            (t/commit-txn propagation connection txn-context))
-          (throw error))
-        (finally
-          (t/end-txn propagation connection txn-context))))))
-
-
-(defmacro with-transaction
-  "Bind `connection` (symbol) to a connection obtained from specified source, setup a transaction evaluating the
-  body of code in specified transaction context. Restore old transaction context upon exit on best effort basis.
-  See: invoke-with-transaction"
-  [[connection connection-source] options & body]
-  (when-not (symbol? connection)
-    (i/unexpected "a symbol" connection))
-  `(invoke-with-transaction (^:once fn* [~(if (:tag (meta connection))
-                                            connection
-                                            (vary-meta connection assoc :tag java.sql.Connection))] ~@body)
-     ~connection-source ~options))
+;
+;
+;(defmacro with-connection
+;  "Bind `connection` (symbol) to a connection obtained from specified source, evaluating the body of code in that
+;  context. Return connection in the end."
+;  [[connection connection-source] & body]
+;  (when-not (symbol? connection)
+;    (i/unexpected "a symbol" connection))
+;  `(let [conn-source# ~connection-source
+;         ~(if (:tag (meta connection))
+;            connection
+;            (vary-meta connection assoc :tag java.sql.Connection)) (t/obtain-connection conn-source#)]
+;     (try ~@body
+;       (finally
+;         (t/return-connection conn-source# ~connection)))))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----
@@ -370,7 +231,7 @@
   ([result-set-worker connection-source sql-or-template params]
     (query t/set-params result-set-worker connection-source sql-or-template params))
   ([params-setter result-set-worker connection-source sql-or-template params]
-    (with-connection [connection connection-source]
+    (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (params-setter sql-or-template pstmt params)
@@ -386,7 +247,7 @@
   ([result-set-worker connection-source sql-or-template params]
     (genkey t/set-params result-set-worker connection-source sql-or-template params))
   ([params-setter result-set-worker connection-source sql-or-template params]
-    (with-connection [connection connection-source]
+    (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) true)]
         (params-setter sql-or-template pstmt params)
@@ -400,7 +261,7 @@
   ([connection-source sql-or-template params]
     (update t/set-params connection-source sql-or-template params))
   ([params-setter connection-source sql-or-template params]
-    (with-connection [connection connection-source]
+    (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (params-setter sql-or-template pstmt params)
@@ -412,7 +273,7 @@
   ([connection-source sql-or-template batch-params]
     (batch-update t/set-params connection-source sql-or-template batch-params))
   ([params-setter connection-source sql-or-template batch-params]
-    (with-connection [connection connection-source]
+    (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
                                              (t/get-sql sql-or-template) false)]
         (doseq [params batch-params]
