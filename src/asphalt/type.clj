@@ -18,7 +18,7 @@
   (return-connection [this connection] "Return connection to the source"))
 
 
-(defprotocol ISql
+(defprotocol ISqlSource
   (get-sql    [this] "Return SQL string to be executed")
   (set-params [this ^PreparedStatement prepared-statement params] "Set prepared-statement params")
   (read-col   [this ^ResultSet result-set column-index] "Read column at specified index (1 based) from result-set")

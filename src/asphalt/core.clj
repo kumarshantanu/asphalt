@@ -141,84 +141,66 @@
 
 (defn fetch-maps
   "Fetch a collection of maps."
-  [isql ^ResultSet result-set]
+  [sql-source ^ResultSet result-set]
   (doall (resultset-seq result-set)))
 
 
 (defn fetch-rows
-  "Given java.sql.ResultSet and asphalt.type.ISql instances fetch a vector of rows using ISql."
-  ([isql ^ResultSet result-set]
-    (fetch-rows t/read-row isql result-set))
-  ([row-maker isql ^ResultSet result-set]
+  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances fetch a vector of rows using ISqlSource."
+  ([sql-source ^ResultSet result-set]
+    (fetch-rows t/read-row sql-source result-set))
+  ([row-maker sql-source ^ResultSet result-set]
     (let [rows (transient [])
           ^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
       (while (.next result-set)
-        (conj! rows (row-maker isql result-set column-count)))
+        (conj! rows (row-maker sql-source result-set column-count)))
       (persistent! rows))))
 
 
 (defn fetch-single-row
-  "Given java.sql.ResultSet and asphalt.type.ISql instances ensure result has exactly one row and fetch it using
-  ISql."
-  ([isql ^ResultSet result-set]
-    (fetch-single-row t/read-row isql result-set))
-  ([row-maker isql ^ResultSet result-set]
+  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances ensure result has exactly one row and fetch it using
+  ISqlSource."
+  ([sql-source ^ResultSet result-set]
+    (fetch-single-row t/read-row sql-source result-set))
+  ([row-maker sql-source ^ResultSet result-set]
     (if (.next result-set)
       (let [^ResultSetMetaData rsmd (.getMetaData result-set)
             column-count (.getColumnCount rsmd)
-            row (row-maker isql result-set column-count)]
+            row (row-maker sql-source result-set column-count)]
         (if (.next result-set)
-          (let [sql (t/get-sql isql)]
+          (let [sql (t/get-sql sql-source)]
             (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
                      {:sql sql :multi? true})))
           row))
-      (let [sql (t/get-sql isql)]
+      (let [sql (t/get-sql sql-source)]
         (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
                  {:sql sql :empty? true}))))))
 
 
 (defn fetch-single-value
-  "Given java.sql.ResultSet and asphalt.type.ISql instances, ensure result has exactly one row and one column, and
-  fetch it using ISql."
-  ([isql ^ResultSet result-set]
-    (fetch-single-value t/read-col isql result-set))
-  ([column-reader isql ^ResultSet result-set]
+  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances, ensure result has exactly one row and one column, and
+  fetch it using ISqlSource."
+  ([sql-source ^ResultSet result-set]
+    (fetch-single-value t/read-col sql-source result-set))
+  ([column-reader sql-source ^ResultSet result-set]
     (let [^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
       (when (not= 1 column-count)
-        (let [sql (t/get-sql isql)]
+        (let [sql (t/get-sql sql-source)]
           (throw (ex-info (str "Expected exactly one JDBC result column but found " column-count " for SQL: " sql)
                    {:column-count column-count
                     :sql sql}))))
       (if (.next result-set)
-        (let [column-value (column-reader isql result-set 1)]
+        (let [column-value (column-reader sql-source result-set 1)]
           (if (.next result-set)
-            (let [sql (t/get-sql isql)]
+            (let [sql (t/get-sql sql-source)]
               (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
                        {:sql sql :multi? true})))
             column-value))
-        (let [sql (t/get-sql isql)]
+        (let [sql (t/get-sql sql-source)]
           (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
                    {:sql sql :empty? true})))))))
-
-
-;; ----- working with asphalt.type.IConnectionSource -----
-;
-;
-;(defmacro with-connection
-;  "Bind `connection` (symbol) to a connection obtained from specified source, evaluating the body of code in that
-;  context. Return connection in the end."
-;  [[connection connection-source] & body]
-;  (when-not (symbol? connection)
-;    (i/unexpected "a symbol" connection))
-;  `(let [conn-source# ~connection-source
-;         ~(if (:tag (meta connection))
-;            connection
-;            (vary-meta connection assoc :tag java.sql.Connection)) (t/obtain-connection conn-source#)]
-;     (try ~@body
-;       (finally
-;         (t/return-connection conn-source# ~connection)))))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----
@@ -228,56 +210,56 @@
   "Execute query with params and process the java.sql.ResultSet instance with result-set-worker. The java.sql.ResultSet
   instance is closed in the end, so result-set-worker should neither close it nor make a direct/indirect reference to
   it in the value it returns."
-  ([result-set-worker connection-source sql-or-template params]
-    (query t/set-params result-set-worker connection-source sql-or-template params))
-  ([params-setter result-set-worker connection-source sql-or-template params]
+  ([result-set-worker connection-source sql-source params]
+    (query t/set-params result-set-worker connection-source sql-source params))
+  ([params-setter result-set-worker connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-or-template) false)]
-        (params-setter sql-or-template pstmt params)
+                                             (t/get-sql sql-source) false)]
+        (params-setter sql-source pstmt params)
         (with-open [^ResultSet result-set (.executeQuery pstmt)]
-          (result-set-worker sql-or-template result-set))))))
+          (result-set-worker sql-source result-set))))))
 
 
 (defn genkey
   "Execute an update statement returning the keys generated by the statement. The generated keys are extracted from a
   java.sql.ResultSet instance using the optional result-set-worker argument."
-  ([connection-source sql-or-template params]
-    (genkey t/set-params fetch-single-value connection-source sql-or-template params))
-  ([result-set-worker connection-source sql-or-template params]
-    (genkey t/set-params result-set-worker connection-source sql-or-template params))
-  ([params-setter result-set-worker connection-source sql-or-template params]
+  ([connection-source sql-source params]
+    (genkey t/set-params fetch-single-value connection-source sql-source params))
+  ([result-set-worker connection-source sql-source params]
+    (genkey t/set-params result-set-worker connection-source sql-source params))
+  ([params-setter result-set-worker connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-or-template) true)]
-        (params-setter sql-or-template pstmt params)
+                                             (t/get-sql sql-source) true)]
+        (params-setter sql-source pstmt params)
         (.executeUpdate pstmt)
         (with-open [^ResultSet generated-keys (.getGeneratedKeys pstmt)]
-          (result-set-worker sql-or-template generated-keys))))))
+          (result-set-worker sql-source generated-keys))))))
 
 
 (defn update
   "Execute an update statement returning the number of rows impacted."
-  ([connection-source sql-or-template params]
-    (update t/set-params connection-source sql-or-template params))
-  ([params-setter connection-source sql-or-template params]
+  ([connection-source sql-source params]
+    (update t/set-params connection-source sql-source params))
+  ([params-setter connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-or-template) false)]
-        (params-setter sql-or-template pstmt params)
+                                             (t/get-sql sql-source) false)]
+        (params-setter sql-source pstmt params)
         (.executeUpdate pstmt)))))
 
 
 (defn batch-update
   "Execute a SQL write statement with a batch of parameters returning the number of rows updated as a vector."
-  ([connection-source sql-or-template batch-params]
-    (batch-update t/set-params connection-source sql-or-template batch-params))
-  ([params-setter connection-source sql-or-template batch-params]
+  ([connection-source sql-source batch-params]
+    (batch-update t/set-params connection-source sql-source batch-params))
+  ([params-setter connection-source sql-source batch-params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-or-template) false)]
+                                             (t/get-sql sql-source) false)]
         (doseq [params batch-params]
-          (params-setter sql-or-template pstmt params)
+          (params-setter sql-source pstmt params)
           (.addBatch pstmt))
         (vec (.executeBatch pstmt))))))
 
@@ -289,9 +271,9 @@
   "Return a params setter fn usable with asphalt.core/query, that times out on query execution and throws a
   java.sql.SQLTimeoutException instance. Supported by JDBC 4.0 (and higher) drivers only."
   [^long n-seconds]
-  (fn [sql-or-template ^PreparedStatement pstmt params]
+  (fn [sql-source ^PreparedStatement pstmt params]
     (.setQueryTimeout pstmt n-seconds)
-    (t/set-params sql-or-template pstmt params)))
+    (t/set-params sql-source pstmt params)))
 
 
 (defmacro defquery

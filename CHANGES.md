@@ -11,7 +11,7 @@
 
 * Redundant/unwanted type hint was omitted to avoid compilation error with Clojure 1.8.0
 * Fetching SQL statement
-  * [TODO] Rename `ISql` to `ISqlSource`
+  * Rename `asphalt.type.ISql` to `asphalt.type.ISqlSource` (internal breaking change)
   * [TODO] Map should consider `:factory`
 * JDBC connections are obtained from and returned to an abstraction `asphalt.type.IConnectionSource`
   * Extends to `java.sql.Connection` and `javax.sql.DataSource` (already supported)

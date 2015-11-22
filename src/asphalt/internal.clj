@@ -597,7 +597,7 @@
     (->SQLTemplate sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
 
 
-(extend-protocol t/ISql
+(extend-protocol t/ISqlSource
   ;;=========
   SQLTemplate
   ;;=========
