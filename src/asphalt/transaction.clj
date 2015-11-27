@@ -16,7 +16,27 @@
     [asphalt.type     :as t]
     [asphalt.internal :as i])
   (:import
-    [java.sql Connection Savepoint]))
+    [java.sql Connection Savepoint]
+    [asphalt.type TxnConnectionSource]))
+
+
+(defn assoc-connection
+  "Associate specified connection with given asphalt.type.TxnConnectionSource instance."
+  [txn-connection-source connection]
+  (assoc txn-connection-source :connection connection))
+
+
+(defmacro with-txn-connection-source
+  "Bind `txn-connection-source` (symbol or destrucuring form) to a transactional connection source (an instance of
+  asphalt.type.TxnConnectionSource) made from specified connection source, and execute body of code in that context."
+  [[txn-connection-source connection-source] & body]
+  `(let [conn-source# ~connection-source]
+     (if (instance? TxnConnectionSource conn-source#)
+       (let [~txn-connection-source conn-source#]
+         ~@body)
+       (i/with-connection [connection# conn-source#]
+         (let [~txn-connection-source (t/->TxnConnectionSource connection# conn-source#)]
+           ~@body)))))
 
 
 ;; ----- transaction propagation -----
@@ -25,11 +45,11 @@
 (def ^{:doc "Use current transaction, throw exception if unavailable. Isolation is ignored."}
      tp-mandatory
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection connection conn-source]
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
                                                   (when (.getAutoCommit ^Connection connection)
                                                     (throw (ex-info "Expected a pre-existing transaction, found none"
                                                              {:txn-strategy :mandatory})))
-                                                  (worker connection {})))
+                                                  (worker tcs {})))
     (commit-txn   [this connection txn-context] (.commit ^Connection connection))
     (rollback-txn [this connection txn-context] (.rollback ^Connection connection))))
 
@@ -42,15 +62,15 @@
     :isolation - transaction isolation"}
      tp-nested
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection conn conn-source]
-                                                  (if (.getAutoCommit ^Connection conn)
-                                                    (t/execute-txn tp-required conn-source worker opts)
-                                                    (i/with-txn-info conn (assoc opts :auto-commit? false)
-                                                      (let [^Savepoint savepoint (.setSavepoint ^Connection conn)]
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (if (.getAutoCommit ^Connection connection)
+                                                    (t/execute-txn tp-required tcs worker opts)
+                                                    (i/with-txn-info connection (assoc opts :auto-commit? false)
+                                                      (let [^Savepoint savepoint (.setSavepoint ^Connection connection)]
                                                         (try
-                                                          (worker conn {:savepoint savepoint})
+                                                          (worker tcs {:savepoint savepoint})
                                                           (finally
-                                                            (.releaseSavepoint ^Connection conn savepoint))))))))
+                                                            (.releaseSavepoint ^Connection connection savepoint))))))))
     (commit-txn   [this connection txn-context] (.commit ^Connection connection))
     (rollback-txn [this connection txn-context] (if-let [^Savepoint savepoint (:savepoint txn-context)]
                                                   (.rollback ^Connection connection savepoint)
@@ -60,11 +80,11 @@
 (def ^{:doc "Throw exception if a transaction exists, execute non-transactionally otherwise. Isolation is ignored."}
      tp-never
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection conn conn-source]
-                                                  (when-not (.getAutoCommit ^Connection conn)
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (when-not (.getAutoCommit ^Connection connection)
                                                     (throw (ex-info "Expected no pre-existing transaction, found one"
                                                              {:txn-strategy :never})))
-                                                  (worker conn {})))
+                                                  (worker tcs {})))
     (commit-txn   [this connection txn-context])
     (rollback-txn [this connection txn-context])))
 
@@ -73,11 +93,11 @@
   Isolation is ignored."}
      tp-not-supported
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-new-connection [^Connection conn conn-source]
-                                                  (when-not (.getAutoCommit ^Connection conn)
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (when-not (.getAutoCommit ^Connection connection)
                                                     (throw (ex-info "Expected no pre-existing transaction, found one"
                                                              {:txn-strategy :not-supported})))
-                                                  (worker conn {})))
+                                                  (worker tcs {})))
     (commit-txn   [this connection txn-context])
     (rollback-txn [this connection txn-context])))
 
@@ -87,12 +107,9 @@
     :isolation - the transaction isolation level"}
      tp-required
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection conn conn-source]
-                                                  (if (.getAutoCommit ^Connection conn)
-                                                    (i/with-txn-info conn (assoc opts :auto-commit? false)
-                                                      (worker conn {}))
-                                                    (i/with-txn-info conn (assoc opts :auto-commit? true)
-                                                      (worker conn {})))))
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (i/with-txn-info connection (assoc opts :auto-commit? false)
+                                                    (worker tcs {}))))
     (commit-txn   [this connection txn-context] (.commit ^Connection connection))
     (rollback-txn [this connection txn-context] (.rollback ^Connection connection))))
 
@@ -103,17 +120,17 @@
     :isolation - transaction isolation"}
      tp-requires-new
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection conn conn-source]
-                                                  (if (.getAutoCommit ^Connection conn)
-                                                    (i/with-new-connection [^Connection conn conn-source]
-                                                      (i/with-txn-info conn (assoc opts :auto-commit? false)
-                                                        (worker conn {})))
-                                                    (i/with-txn-info conn (assoc opts :auto-commit? false)
-                                                      (let [^Savepoint savepoint (.setSavepoint ^Connection conn)]
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (if (.getAutoCommit ^Connection connection)
+                                                    (i/with-new-connection [^Connection connection tcs]
+                                                      (i/with-txn-info connection (assoc opts :auto-commit? false)
+                                                        (worker (assoc-connection tcs connection) {})))
+                                                    (i/with-txn-info connection (assoc opts :auto-commit? false)
+                                                      (let [^Savepoint savepoint (.setSavepoint ^Connection connection)]
                                                         (try
-                                                          (worker conn {:savepoint savepoint})
+                                                          (worker tcs {:savepoint savepoint})
                                                           (finally
-                                                            (.releaseSavepoint ^Connection conn savepoint))))))))
+                                                            (.releaseSavepoint ^Connection connection savepoint))))))))
     (commit-txn   [this connection txn-context] (.commit ^Connection connection))
     (rollback-txn [this connection txn-context] (if-let [^Savepoint savepoint (:savepoint txn-context)]
                                                   (.rollback ^Connection connection savepoint)
@@ -123,10 +140,10 @@
 (def ^{:doc "Use current transaction if one exists, execute non-transactionally otherwise. Isolation is ignored."}
      tp-supports
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (i/with-connection [^Connection conn conn-source]
-                                                  (if (.getAutoCommit ^Connection conn)
-                                                    (worker conn nil)
-                                                    (worker conn {}))))
+    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
+                                                  (if (.getAutoCommit ^Connection connection)
+                                                    (worker tcs nil)
+                                                    (worker tcs {}))))
     (commit-txn   [this connection txn-context] (when txn-context (.commit ^Connection connection)))
     (rollback-txn [this connection txn-context] (when txn-context (.rollback ^Connection connection)))))
 
@@ -137,7 +154,7 @@
 (defn invoke-with-transaction
   "Execute specified txn-worker in a transaction using connection-source and txn options:
   Arguments:
-    txn-worker        | fn, accepts java.sql.Connection as argument
+    txn-worker        | fn, accepts asphalt.type.TxnConnectionSource as argument
     connection-source | instance of asphalt.type.IConnectionSource
   Options:
     :isolation        | either of :none, :read-committed, :read-uncommitted, :repeatable-read, :serializable
@@ -149,18 +166,19 @@
                                       success-result? (fn [result] true)
                                       failure-error?  (fn [error] true)}
                                  :as options}]
-  (t/execute-txn propagation connection-source (fn [^Connection connection txn-context]
-                                                 (try
-                                                   (let [result (txn-worker connection)]
-                                                     (if (success-result? result)
-                                                       (t/commit-txn propagation connection txn-context)
-                                                       (t/rollback-txn propagation connection txn-context))
-                                                     result)
-                                                   (catch Throwable error
-                                                     (if (failure-error? error)
-                                                       (t/rollback-txn propagation connection txn-context)
-                                                       (t/commit-txn propagation connection txn-context))
-                                                     (throw error))))
+  (t/execute-txn propagation connection-source
+    (fn [^TxnConnectionSource txn-connection-source txn-context]
+      (try
+        (let [result (txn-worker txn-connection-source)]
+          (if (success-result? result)
+            (t/commit-txn   propagation (:connection txn-connection-source) txn-context)
+            (t/rollback-txn propagation (:connection txn-connection-source) txn-context))
+          result)
+        (catch Throwable error
+          (if (failure-error? error)
+            (t/rollback-txn propagation (:connection txn-connection-source) txn-context)
+            (t/commit-txn   propagation (:connection txn-connection-source) txn-context))
+          (throw error))))
     (merge options
       (if isolation
         {:isolation (i/resolve-txn-isolation isolation)}
@@ -168,13 +186,10 @@
 
 
 (defmacro with-transaction
-  "Bind `connection` (symbol) to a connection obtained from specified source, setup a transaction evaluating the
-  body of code in specified transaction context. Restore old transaction context upon exit on best effort basis.
+  "Setup a transaction and evaluate the body of code in specified transaction context, binding `txn-connection-source`
+  (symbol or destructuring form) to a transactional connection source (asphalt.type.TxnConnectionSource instance) made
+  from specified connection source. Restore old transaction context upon exit on best effort basis.
   See: invoke-with-transaction"
-  [[connection connection-source] options & body]
-  (when-not (symbol? connection)
-    (i/unexpected "a symbol" connection))
-  `(invoke-with-transaction (^:once fn* [~(if (:tag (meta connection))
-                                            connection
-                                            (vary-meta connection assoc :tag java.sql.Connection))] ~@body)
+  [[txn-connection-source connection-source] options & body]
+  `(invoke-with-transaction (^:once fn* [~txn-connection-source] ~@body)
      ~connection-source ~options))

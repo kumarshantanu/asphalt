@@ -31,6 +31,15 @@
   (rollback-txn [this ^Connection connection txn-context] "Rollback current transaction"))
 
 
+(defrecord TxnConnectionSource
+  [^Connection connection connection-source]
+  IConnectionSource
+  (create-connection      [this] (create-connection connection-source))
+  (obtain-connection      [this] connection)
+  (return-connection [this conn] (when-not (identical? conn connection) ; do not close current connection
+                                   (return-connection connection-source connection))))
+
+
 (def ^:const sql-nil        0)
 (def ^:const sql-bool       1)
 (def ^:const sql-boolean    1) ; duplicate of bool

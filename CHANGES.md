@@ -19,6 +19,7 @@
   * [TODO] Deprecate/remove `instrument-datasource` (breaking change)
 * Overhauled transaction API
   * All transaction management code moved to new namespace `asphalt.transaction` (breaking change)
+  * Transactional connection source
   * `with-transaction` accepts an option map as second argument (breaking change)
   * Option keys `:result-success?`, `:error-failure?`, `:isolation`, `:propagation`
   * Transaction propagation is a first class abstraction `asphalt.type.ITransactionPropagation`
