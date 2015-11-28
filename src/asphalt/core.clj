@@ -55,23 +55,25 @@
         ^JdbcEventListener stmt-creation-listener (as-jdbc-event-listener stmt-creation)
         ^JdbcEventListener sql-execution-listener (as-jdbc-event-listener sql-execution)
         nanos-now (fn (^long [] (System/nanoTime))
-                    (^long [^long start] (- (System/nanoTime) start)))]
+                    (^long [^long start] (- (System/nanoTime) start)))
+        make-conn (fn [f] (let [event :jdbc-connection-creation-event
+                                ^String id (.before conn-creation-listener event)
+                                start (nanos-now)]
+                            (try
+                              (let [result (ConnectionWrapper.
+                                             (f connection-source)
+                                             i/jdbc-event-factory
+                                             stmt-creation-listener sql-execution-listener)]
+                                (.onSuccess conn-creation-listener id (nanos-now start) event)
+                                result)
+                              (catch Exception e
+                                (.onError conn-creation-listener id (nanos-now start) event e)
+                                (throw e))
+                              (finally
+                                (.lastly conn-creation-listener id (nanos-now start) event)))))]
     (reify t/IConnectionSource
-      (obtain-connection            [this] (let [event :jdbc-connection-creation-event
-                                                 ^String id (.before conn-creation-listener event)
-                                                 start (nanos-now)]
-                                             (try
-                                               (let [result (ConnectionWrapper.
-                                                              (t/obtain-connection connection-source)
-                                                              i/jdbc-event-factory
-                                                              stmt-creation-listener sql-execution-listener)]
-                                                 (.onSuccess conn-creation-listener id (nanos-now start) event)
-                                                 result)
-                                               (catch Exception e
-                                                 (.onError conn-creation-listener id (nanos-now start) event e)
-                                                 (throw e))
-                                               (finally
-                                                 (.lastly conn-creation-listener id (nanos-now start) event)))))
+      (create-connection            [this] (make-conn t/create-connection))
+      (obtain-connection            [this] (make-conn t/obtain-connection))
       (return-connection [this connection] (t/return-connection connection-source connection)))))
 
 
