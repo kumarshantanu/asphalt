@@ -1,6 +1,6 @@
 {:adapter  :h2
  :target   :memory
- :database "test"
+ :database "test;MVCC=true"
  :username "sa"
  :password ""
  :create-ddl "CREATE TABLE emp (

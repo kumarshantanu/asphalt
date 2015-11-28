@@ -93,11 +93,11 @@
   Isolation is ignored."}
      tp-not-supported
   (reify t/ITransactionPropagation
-    (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
-                                                  (when-not (.getAutoCommit ^Connection connection)
-                                                    (throw (ex-info "Expected no pre-existing transaction, found one"
-                                                             {:txn-strategy :not-supported})))
-                                                  (worker tcs {})))
+    (execute-txn [this conn-source worker opts] (i/with-new-connection [^Connection connection conn-source]
+                                                  (let [tcs (if (instance? TxnConnectionSource conn-source)
+                                                              (assoc-connection conn-source connection)
+                                                              (t/->TxnConnectionSource connection conn-source))]
+                                                    (worker tcs {}))))
     (commit-txn   [this connection txn-context])
     (rollback-txn [this connection txn-context])))
 
@@ -141,11 +141,11 @@
      tp-supports
   (reify t/ITransactionPropagation
     (execute-txn [this conn-source worker opts] (with-txn-connection-source [{:keys [connection] :as tcs} conn-source]
-                                                  (if (.getAutoCommit ^Connection connection)
-                                                    (worker tcs nil)
-                                                    (worker tcs {}))))
-    (commit-txn   [this connection txn-context] (when txn-context (.commit ^Connection connection)))
-    (rollback-txn [this connection txn-context] (when txn-context (.rollback ^Connection connection)))))
+                                                  (let [auto-commit? (.getAutoCommit ^Connection connection)]
+                                                    (worker tcs {:commit?   (not auto-commit?)
+                                                                 :rollback? (not auto-commit?)}))))
+    (commit-txn   [this connection txn-context] (when (:commit?   txn-context) (.commit   ^Connection connection)))
+    (rollback-txn [this connection txn-context] (when (:rollback? txn-context) (.rollback ^Connection connection)))))
 
 
 ;; ----- transactions -----
@@ -193,3 +193,14 @@
   [[txn-connection-source connection-source] options & body]
   `(invoke-with-transaction (^:once fn* [~txn-connection-source] ~@body)
      ~connection-source ~options))
+
+
+(defn wrap-transaction-options
+  "Wrap a fn accepting connection-source as first argument with transaction options. Return the wrapped fn that accepts
+  connection-source as first argument, but internally invokes f with transactional connection-source as first argument.
+  See: invoke-with-transaction"
+  [f txn-options]
+  (fn [connection-source & args]
+    (let [txn-worker (fn [^TxnConnectionSource txn-connection-source]
+                       (apply f txn-connection-source args))]
+      (invoke-with-transaction txn-worker connection-source txn-options))))
