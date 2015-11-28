@@ -14,6 +14,7 @@
     [citius.core       :as c]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
+    [asphalt.internal  :as i]
     [asphalt.type      :as t]))
 
 
@@ -32,7 +33,7 @@
 (use-fixtures :each test-fixture)
 
 
-(def db-spec {:datasource u/ds})
+(def db-spec {:datasource u/orig-ds})
 
 ;"CREATE TABLE emp
 ;id     INT PRIMARY KEY AUTO_INCREMENT,
@@ -64,7 +65,7 @@
                :dept "Accounts"}
           vdat (vec (map data [:name :salary :dept]))]
      (jdbc/with-db-connection [db-con db-spec]
-       (a/with-connection [conn u/ds]
+       (i/with-connection [conn u/orig-ds]
          (c/compare-perf "insert-delete"
            (do
              (jdbc/insert! db-con :emp data)
@@ -85,11 +86,11 @@
     (let [data {:name "Joe Coder"
                 :salary 100000
                 :dept "Accounts"}]
-      (a/with-connection [conn u/ds]
+      (i/with-connection [conn u/orig-ds]
         (a/update conn t-insert data))
       ;; bench c.j.j normal with asphalt
       (jdbc/with-db-connection [db-con db-spec]
-        (a/with-connection [conn u/ds]
+        (i/with-connection [conn u/orig-ds]
           (c/compare-perf "select-row"
             (jdbc/query db-con [s-select])
             (a/query a/fetch-rows conn s-select nil)
@@ -97,7 +98,7 @@
             (a/query a/fetch-rows conn m-select nil))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
-        (a/with-connection [conn u/ds]
+        (i/with-connection [conn u/orig-ds]
           (c/compare-perf "select-row-as-arrays"
             (jdbc/query db-con [s-select] :as-arrays? true)
             (a/query a/fetch-rows conn s-select nil)
