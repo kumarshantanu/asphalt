@@ -16,7 +16,7 @@
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :dlnk {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.2"]
-                                   [org.clojure/java.jdbc "0.4.1"]]
+                                   [org.clojure/java.jdbc "0.4.2"]]
                     :test-paths ["perf"]}}
   :jvm-opts ^:replace ["-server" "-Xms2048m" "-Xmx2048m"]
   :global-vars {*warn-on-reflection* true
