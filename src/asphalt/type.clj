@@ -37,7 +37,7 @@
   (create-connection      [this] (create-connection connection-source))
   (obtain-connection      [this] connection)
   (return-connection [this conn] (when-not (identical? conn connection) ; do not close current connection
-                                   (return-connection connection-source connection))))
+                                   (return-connection connection-source conn))))
 
 
 (def ^:const sql-nil        0)
