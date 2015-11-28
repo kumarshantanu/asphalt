@@ -45,6 +45,7 @@
    :on-success (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])
    :on-error   (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event ^Exception error])
    :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
+  {:added "0.4.0"}
   [connection-source {:keys [conn-creation stmt-creation sql-execution]
                       :or {conn-creation JdbcEventListener/NOP
                            stmt-creation JdbcEventListener/NOP
@@ -78,7 +79,8 @@
 
 
 (defn instrument-datasource
-  "Make instrumented javax.sql.DataSource instance using statement-creation and SQL-execution listeners.
+  "DEPRECATED: Use 'instrument-connection-source' instead.
+  Make instrumented javax.sql.DataSource instance using statement-creation and SQL-execution listeners.
 
   Option :stmt-creation corresponds to a map containing the following fns, triggered when JDBC statements are created:
   {:before     (fn [^asphalt.type.StmtCreationEvent event])
@@ -91,9 +93,12 @@
    :on-success (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])
    :on-error   (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event ^Exception error])
    :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
-  ^javax.sql.DataSource [^DataSource ds {:keys [stmt-creation sql-execution]
-                                         :or {stmt-creation JdbcEventListener/NOP
-                                              sql-execution      JdbcEventListener/NOP}}]
+  ^javax.sql.DataSource
+  {:added "0.3.0"
+   :deprecated "0.4.0"}
+  [^DataSource ds {:keys [stmt-creation sql-execution]
+                   :or {stmt-creation JdbcEventListener/NOP
+                        sql-execution      JdbcEventListener/NOP}}]
   (let [stmt-creation-listener (if (instance? JdbcEventListener stmt-creation)
                                  stmt-creation
                                  (i/make-jdbc-event-listener stmt-creation))

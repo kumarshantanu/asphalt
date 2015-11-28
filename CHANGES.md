@@ -16,7 +16,7 @@
   * Extends to `java.sql.Connection` and `javax.sql.DataSource` (already supported)
   * Extends to map for [clojure/java.jdbc](https://github.com/clojure/java.jdbc) compatibility (new feature)
 * Instrumentation endpoint `instrument-connection-source` for creating JDBC connections
-  * [TODO] Deprecate/remove `instrument-datasource` (breaking change)
+  * Deprecate `instrument-datasource`
 * Overhauled transaction API
   * All transaction management code moved to new namespace `asphalt.transaction` (breaking change)
   * Transactional connection source
