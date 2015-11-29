@@ -3,8 +3,13 @@
 ## TODO and Ideas
 
 * [TODO] Support stored procedure call
+* [TODO] Helper macro to create efficient params setter
+* [TODO] Helper macro to create efficient `java.sql.ResultSet` worker
 * [TODO] Params setter can be specified via `defsql`
-* [TODO] New macros - `defgenkey`, `defupdate`
+* [TODO] Make `SqlTemplate` double as fn `(f connection-source sql-source params)`
+  * [TODO] Refactor `defquery` to use overhauled `SqlTemplate`
+  * [TODO] New macros - `defgenkey`, `defupdate`
+* [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 
 
 ## 0.4.0 / 2015-????-??
