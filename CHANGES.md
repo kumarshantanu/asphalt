@@ -12,7 +12,7 @@
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 
 
-## 0.4.0 / 2015-????-??
+## 0.4.0 / 2015-November-30
 
 * Redundant/unwanted type hint was omitted to avoid compilation error with Clojure 1.8.0
 * Fetching SQL statement
