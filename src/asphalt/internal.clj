@@ -573,11 +573,14 @@
 
 
 (defrecord SQLTemplate
-  [^String sql ^objects param-keys ^bytes param-types ^bytes result-types])
+  [^String sql-name ^String sql ^objects param-keys ^bytes param-types ^bytes result-types]
+  clojure.lang.Named
+  (getName [_] sql-name))
 
 
 (defmethod print-method SQLTemplate [^SQLTemplate obj ^Writer w]
-  (let [m {:sql          (.-sql obj)
+  (let [m {:name         (.-sql-name obj)
+           :sql          (.-sql obj)
            :param-keys   (vec (.-param-keys obj))
            :param-types  (vec (.-param-types obj))
            :result-types (vec (.-result-types obj))}]
@@ -589,12 +592,12 @@
   sql - \"SELECT name, salary FROM emp WHERE salary > ? AND dept = ?\"
   param-pairs - [[:salary :int] [:dept]]
   result-column-types - [:string :int]"
-  ^SQLTemplate [sql param-pairs result-column-types]
+  ^SQLTemplate [sql-name sql param-pairs result-column-types]
   (when-not (string? sql)
     (unexpected "SQL string" sql))
   (let [param-keys (map first param-pairs)
         param-types (map second param-pairs)]
-    (->SQLTemplate sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
+    (->SQLTemplate sql-name sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
 
 
 (extend-protocol t/ISqlSource

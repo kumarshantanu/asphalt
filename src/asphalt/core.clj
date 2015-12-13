@@ -119,11 +119,12 @@
   that can be used later to extract param values from maps."
   ([^String sql]
     (parse-sql sql {}))
-  ([^String sql {:keys [escape-char param-start-char type-start-char name-encoder]
-                 :or {escape-char \\ param-start-char \$ type-start-char \^}
+  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
+                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
                  :as options}]
     (let [[sql named-params return-col-types]  (i/parse-sql-str sql escape-char param-start-char type-start-char)]
       (i/make-sql-template
+        sql-name
         sql
         (mapv #(let [[p-name p-type] %]
                  [(i/encode-name p-name) (i/encode-type p-type sql)])
@@ -136,11 +137,11 @@
   ([var-symbol sql]
     (when-not (symbol? var-symbol)
       (i/unexpected "a symbol" var-symbol))
-    `(def ~var-symbol (parse-sql ~sql)))
+    `(defsql ~var-symbol ~sql {}))
   ([var-symbol sql options]
     (when-not (symbol? var-symbol)
       (i/unexpected "a symbol" var-symbol))
-    `(def ~var-symbol (parse-sql ~sql ~options))))
+    `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
 
 
 ;; ----- java.sql.ResultSet operations -----
@@ -290,7 +291,7 @@
     `(defquery ~var-symbol ~sql ~result-set-worker {}))
   ([var-symbol sql result-set-worker options]
     (let [sql-template-sym (gensym "sql-template-")]
-      `(let [~sql-template-sym (parse-sql ~sql ~options)
+      `(let [~sql-template-sym (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options))
              query-fetch# (if-let [params-setter# (:params-setter ~options)]
                             (partial query params-setter# ~result-set-worker)
                             (partial query ~result-set-worker))]
