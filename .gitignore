@@ -13,3 +13,5 @@ pom.xml.asc
 /.project
 /.settings
 /bench*.png
+/.nightlight.edn
+
