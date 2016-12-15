@@ -17,6 +17,9 @@
 * [TODO] Make `SqlTemplate` double as fn `(f connection-source sql-source params)`
   * [TODO] Deprecate `defquery`
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
+* [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
+* [TODO] Add support for SQL arrays `java.sql.Array`
+* [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 
 
 ## 0.4.0 / 2015-November-30
