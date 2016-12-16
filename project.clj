@@ -9,12 +9,15 @@
                                   [clj-dbcp "0.8.1"]
                                   [simple-jndi "0.11.4.1"]
                                   [com.h2database/h2 "1.3.176"]]}
+             :provided {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :c16 {:dependencies [[org.clojure/clojure "1.6.0"]]}
              :c17 {:dependencies [[org.clojure/clojure "1.7.0"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
-             :c18 {:dependencies [[org.clojure/clojure "1.8.0-RC3"]]
+             :c18 {:dependencies [[org.clojure/clojure "1.8.0"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
-             :dlnk {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
+             :c19 {:dependencies [[org.clojure/clojure "1.9.0-alpha14"]]
+                   :global-vars {*unchecked-math* :warn-on-boxed}}
+             :dln {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.2"]
                                    [org.clojure/java.jdbc "0.4.2"]]
                     :test-paths ["perf"]}}
