@@ -716,3 +716,24 @@
     (onSuccess [this id nanos event]       (on-success id nanos event))
     (onError   [this id nanos event error] (on-error   id nanos event error))
     (lastly    [this id nanos event]       (lastly     id nanos event))))
+
+
+;; ----- fetch defaults -----
+
+
+(defn on-empty-rows
+  [sql-source ^ResultSet result-set]
+  (let [sql (t/get-sql sql-source)]
+    (throw
+      (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: "
+                 sql)
+        {:sql sql :empty? true}))))
+
+
+(defn on-multi-rows
+  [sql-source ^ResultSet result-set value]
+  (let [sql (t/get-sql sql-source)]
+    (throw
+      (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: "
+                 sql)
+        {:sql sql :multi? true}))))

@@ -5,14 +5,13 @@
 * [TODO] Support stored procedure call
 
 
-## 0.5.0 / 2015-????-??
+## 0.5.0 / 2016-December-??
 
 * Have `asphalt.internal.SQLTemplate` implement the `clojure.lang.Named` interface
   * Have `defsql` support named SQL via `SQLTemplate` by accepting `:sql-name` option kwarg
 * [TODO] Instrumentation logging event for SQL-execution should include `ISqlSource` instead of SQL string
 * [TODO] Helper macro to create efficient params setter
 * [TODO] Helper macro to create efficient `java.sql.ResultSet` worker
-* [TODO] Add `java.sql.ResultSet` workers to fetch single-row/single-value if row available, nil otherwise
 * [TODO] Params setter can be specified via `defsql`
 * [TODO] Make `SqlTemplate` double as fn `(f connection-source sql-source params)`
   * [TODO] Deprecate `defquery`
@@ -20,6 +19,9 @@
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
 * [TODO] Add support for SQL arrays `java.sql.Array`
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
+* Queries
+  * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
+  * Helper fn `asphalt.core/default-fetch` for default values in single row access
 
 
 ## 0.4.0 / 2015-November-30

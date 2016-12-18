@@ -148,67 +148,106 @@
 
 
 (defn fetch-maps
-  "Fetch a collection of maps."
-  [sql-source ^ResultSet result-set]
-  (doall (resultset-seq result-set)))
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps."
+  ([sql-source ^ResultSet result-set]
+    (fetch-maps {} sql-source result-set))
+  ([{:keys [fetch-size]
+     :as options}
+    sql-source ^ResultSet result-set]
+    ;; set fetch size on the JDBC driver
+    (when fetch-size
+      (.setFetchSize result-set (int fetch-size)))
+    ;; fetch rows
+    (doall (resultset-seq result-set))))
 
 
 (defn fetch-rows
-  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances fetch a vector of rows using ISqlSource."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a vector of rows."
   ([sql-source ^ResultSet result-set]
-    (fetch-rows t/read-row sql-source result-set))
-  ([row-maker sql-source ^ResultSet result-set]
+    (fetch-rows {} sql-source result-set))
+  ([{:keys [fetch-size
+            max-rows
+            row-maker]
+     :or {row-maker t/read-row}
+     :as options}
+    sql-source ^ResultSet result-set]
+    ;; set fetch size on the JDBC driver
+    (when fetch-size
+      (.setFetchSize result-set (int fetch-size)))
+    ;; fetch rows
     (let [rows (transient [])
           ^ResultSetMetaData rsmd (.getMetaData result-set)
           column-count (.getColumnCount rsmd)]
-      (while (.next result-set)
-        (conj! rows (row-maker sql-source result-set column-count)))
+      (if max-rows
+        (let [max-row-count (int max-rows)]
+          (loop [i 0]
+            (when (and (< i max-row-count) (.next result-set))
+              (conj! rows (row-maker sql-source result-set column-count))
+              (recur (unchecked-inc i)))))
+        (while (.next result-set)
+          (conj! rows (row-maker sql-source result-set column-count))))
       (persistent! rows))))
 
 
+(defn default-fetch
+  "Given a default value, return the option map to be used to fetch from a single row."
+  [v]
+  {:on-empty (constantly v)
+   :on-multi (fn [_ _ v] v)})
+
+
 (defn fetch-single-row
-  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances ensure result has exactly one row and fetch it using
-  ISqlSource."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row."
   ([sql-source ^ResultSet result-set]
-    (fetch-single-row t/read-row sql-source result-set))
-  ([row-maker sql-source ^ResultSet result-set]
+    (fetch-single-row {} sql-source result-set))
+  ([{:keys [fetch-size
+            on-empty
+            on-multi
+            row-maker]
+     :or {on-empty  i/on-empty-rows
+          on-multi  i/on-multi-rows
+          row-maker t/read-row}
+     :as options}
+    sql-source ^ResultSet result-set]
+    ;; set fetch size on the JDBC driver
+    (when fetch-size
+      (.setFetchSize result-set (int fetch-size)))
+    ;; fetch rows
     (if (.next result-set)
       (let [^ResultSetMetaData rsmd (.getMetaData result-set)
             column-count (.getColumnCount rsmd)
             row (row-maker sql-source result-set column-count)]
         (if (.next result-set)
-          (let [sql (t/get-sql sql-source)]
-            (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
-                     {:sql sql :multi? true})))
+          (on-multi sql-source result-set row)
           row))
-      (let [sql (t/get-sql sql-source)]
-        (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
-                 {:sql sql :empty? true}))))))
+      (on-empty sql-source result-set))))
 
 
 (defn fetch-single-value
-  "Given java.sql.ResultSet and asphalt.type.ISqlSource instances, ensure result has exactly one row and one column, and
-  fetch it using ISqlSource."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value."
   ([sql-source ^ResultSet result-set]
-    (fetch-single-value t/read-col sql-source result-set))
-  ([column-reader sql-source ^ResultSet result-set]
-    (let [^ResultSetMetaData rsmd (.getMetaData result-set)
-          column-count (.getColumnCount rsmd)]
-      (when (not= 1 column-count)
-        (let [sql (t/get-sql sql-source)]
-          (throw (ex-info (str "Expected exactly one JDBC result column but found " column-count " for SQL: " sql)
-                   {:column-count column-count
-                    :sql sql}))))
-      (if (.next result-set)
-        (let [column-value (column-reader sql-source result-set 1)]
-          (if (.next result-set)
-            (let [sql (t/get-sql sql-source)]
-              (throw (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: " sql)
-                       {:sql sql :multi? true})))
-            column-value))
-        (let [sql (t/get-sql sql-source)]
-          (throw (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: " sql)
-                   {:sql sql :empty? true})))))))
+    (fetch-single-value {} sql-source result-set))
+  ([{:keys [column-index
+            column-reader
+            fetch-size
+            on-empty
+            on-multi]
+     :or {column-index  1
+          column-reader t/read-col
+          on-empty      i/on-empty-rows
+          on-multi      i/on-multi-rows}
+     :as options}
+    sql-source ^ResultSet result-set]
+    ;; set fetch size on the JDBC driver
+    (when fetch-size
+      (.setFetchSize result-set (int fetch-size)))
+    ;; fetch rows
+    (if (.next result-set)
+      (let [column-value (column-reader sql-source result-set (int column-index))]
+        (if (.next result-set)
+          (on-multi sql-source result-set column-value)
+          column-value))
+      (on-empty sql-source result-set))))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----

@@ -162,6 +162,15 @@
            target-sql-delete]}]
   (let [vs1 ["Joe Coder" 100000 "Accounts"]
         row (zipmap [:name :salary :dept] vs1)]
+    ;; fetch single row in absence of rows
+    (is (= (vec (a/query (partial a/fetch-single-row (a/default-fetch vs1))
+                  u/ds target-sql-select []))
+          vs1))
+    ;; fetch single column value in absence of rows
+    (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch 1000)
+                                                    :column-index 2))
+             u/ds target-sql-selfew ["Harry"])
+          1000))
     ;; 50 rows
     (dotimes [_ 50]
       (a/update u/ds target-sql-insert row))
@@ -169,7 +178,16 @@
                 u/ds target-sql-count [])) "Verify that all rows were inserted")
     (doseq [each (a/query a/fetch-rows
                    u/ds target-sql-select [])]
-      (is (= (vec each) vs1)))))
+      (is (= (vec each) vs1)))
+    ;; fetch single row in presence of multiple rows
+    (is (= (vec (a/query (partial a/fetch-single-row (a/default-fetch nil))
+                  u/ds target-sql-select []))
+          vs1))
+    ;; fetch single column value in absence of rows
+    (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch nil)
+                                                    :column-index 2))
+             u/ds target-sql-selfew ["Joe Coder"])
+          100000))))
 
 
 (deftest test-rows-template
