@@ -100,7 +100,7 @@
       (jdbc/with-db-connection [db-con db-spec]
         (i/with-connection [conn u/orig-ds]
           (c/compare-perf "select-row-as-arrays"
-            (jdbc/query db-con [s-select] :as-arrays? true)
+            (jdbc/query db-con [s-select] {:as-arrays? true})
             (a/query a/fetch-rows conn s-select nil)
             (a/query a/fetch-rows conn t-select nil)
             (a/query a/fetch-rows conn m-select nil)))))))
