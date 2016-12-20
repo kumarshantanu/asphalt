@@ -408,15 +408,7 @@
             (aset row i (read-column-value result-set j))
             (recur j))))
       row))
-  (^objects [^ResultSet result-set ^long column-count ^bytes column-types]
-    (let [^objects row (object-array column-count)]
-      (loop [i (int 0)]
-        (when (< i column-count)
-          (let [j (unchecked-inc i)]
-            (aset row i (read-column-value result-set j (aget ^bytes column-types i)))
-            (recur j))))
-      row))
-  (^objects [^ResultSet result-set ^long column-count column-types _]
+  (^objects [^ResultSet result-set ^long column-count column-types]
     (let [^objects row (object-array column-count)]
       (loop [i (int 0)]
         (when (< i column-count)
@@ -610,7 +602,7 @@
       (read-column-value result-set column-index)))
   (read-row   [m ^ResultSet result-set ^long column-count]
     (if-let [types (:result-types m)]
-      (read-columns result-set column-count types :vector)
+      (read-columns result-set column-count types)
       (read-columns result-set column-count)))
   ;;====
   String
