@@ -136,11 +136,11 @@
   "Define a parsed SQL template that can be used to execute it later."
   ([var-symbol sql]
     (when-not (symbol? var-symbol)
-      (i/unexpected "a symbol" var-symbol))
+      (i/expected "a symbol" var-symbol))
     `(defsql ~var-symbol ~sql {}))
   ([var-symbol sql options]
     (when-not (symbol? var-symbol)
-      (i/unexpected "a symbol" var-symbol))
+      (i/expected "a symbol" var-symbol))
     `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
 
 

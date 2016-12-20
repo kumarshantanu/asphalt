@@ -52,17 +52,11 @@
                                 :otherwise (IllegalArgumentException. ^String (str/join \space (cons msg more))))))
 
 
-(defn unexpected
-  "Report error about expectation mismatch."
-  [msg found]
-  (illegal-arg "Expected" msg "but found:" (class found) (pr-str found)))
-
-
 (defn assert-symbols
   [& syms]
   (doseq [x syms]
     (when-not (symbol? x)
-      (unexpected "a symbol" x))))
+      (expected "a symbol" x))))
 
 
 ;; ----- utilities -----
@@ -75,7 +69,7 @@
     (map first)
     (apply assert-symbols))
   (when (odd? (count more-pairs))
-    (unexpected "an even number of forms in binding vector" more-pairs))
+    (expected "an even number of forms in binding vector" more-pairs))
   (let [more-syms (->> (partition 2 more-pairs)
                     (map first))
         more-seq  (map  (fn [x] `(seq ~x)) more-syms)
@@ -139,7 +133,7 @@
   [^String token ^String sql]
   (let [k (keyword token)]
     (when-not (contains? sql-type-map k)
-      (unexpected (str supported-sql-types " in SQL string: " sql) token))
+      (expected (str supported-sql-types " in SQL string: " sql) token))
     (get sql-type-map k)))
 
 
@@ -310,7 +304,7 @@
       #_sql-string     11 (.setString    prepared-statement param-index ^String param-value)
       #_sql-time       12 (.setTime      prepared-statement param-index ^java.sql.Time param-value)
       #_sql-timestamp  13 (.setTimestamp prepared-statement param-index ^java.sql.Timestamp param-value)
-      (unexpected supported-sql-types param-type))))
+      (expected supported-sql-types param-type))))
 
 
 (defn set-params-vec!
@@ -402,7 +396,7 @@
       #_sql-string     11 (.getString    result-set column-index)
       #_sql-time       12 (.getTime      result-set column-index)
       #_sql-timestamp  13 (.getTimestamp result-set column-index)
-      (unexpected supported-sql-types column-type))))
+      (expected supported-sql-types column-type))))
 
 
 (defn read-columns
@@ -564,7 +558,7 @@
   result-column-types - [:string :int]"
   ^SQLTemplate [sql-name sql param-pairs result-column-types]
   (when-not (string? sql)
-    (unexpected "SQL string" sql))
+    (expected "SQL string" sql))
   (let [param-keys (map first param-pairs)
         param-types (map second param-pairs)]
     (->SQLTemplate sql-name sql (object-array param-keys) (byte-array param-types) (byte-array result-column-types))))
@@ -637,7 +631,7 @@
   context. Return connection to source in the end."
   [[connection connection-source] & body]
   (when-not (symbol? connection)
-    (unexpected "a symbol" connection))
+    (expected "a symbol" connection))
   `(let [conn-source# ~connection-source
          ~(if (:tag (meta connection))
             connection
@@ -652,7 +646,7 @@
   context. Return connection to source in the end."
   [[connection connection-source] & body]
   (when-not (symbol? connection)
-    (unexpected "a symbol" connection))
+    (expected "a symbol" connection))
   `(let [conn-source# ~connection-source
          ~(if (:tag (meta connection))
             connection
