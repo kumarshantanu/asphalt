@@ -28,6 +28,17 @@
 ;; ----- error reporting -----
 
 
+(defn expected
+  "Throw illegal input exception citing `expectation` and what was `found` did not match. Optionally accept a predicate
+  fn to test `found` before throwing the exception."
+  ([expectation found]
+    (throw (IllegalArgumentException.
+             (format "Expected %s, but found (%s) %s" expectation (class found) (pr-str found)))))
+  ([pred expectation found]
+    (when-not (pred found)
+      (expected expectation found))))
+
+
 (defn illegal-arg
   [msg & more]
   (throw
@@ -302,95 +313,54 @@
       (unexpected supported-sql-types param-type))))
 
 
-(defn set-params!
-  ([^PreparedStatement prepared-statement params]
-    (cond
-      (vector? params) (let [param-count (count params)]
-                         (loop [i (int 0)]
-                           (when (< i param-count)
-                             (let [j (unchecked-inc i)]
-                               (set-param-value! prepared-statement j (get params i))
-                               (recur j)))))
-      (nil? params)    nil
-      :otherwise       (unexpected "params vector" params)))
-  ([^PreparedStatement prepared-statement ^objects param-keys ^bytes param-types params]
-    (cond
-      (map? params)    (let [param-count (alength param-keys)]
-                         (loop [i (int 0)]
-                           (when (< i param-count)
-                             (let [param-key  (aget param-keys i)
-                                   param-type (aget param-types i)
-                                   j (unchecked-inc i)]
-                               (if (contains? params param-key)
-                                 (try
-                                   (set-param-value! prepared-statement j param-type (get params param-key))
-                                   (catch RuntimeException e
-                                     (throw (ex-info (str "Error setting parameter #" j " (" param-key "): "
-                                                       (.getMessage e))
-                                              {:param-index j :param-key param-key} e))))
-                                 (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
-                               (recur j)))))
-      (vector? params) (let [types-count (alength param-keys)
-                             param-count (count params)]
-                         (loop [i (int 0)]
-                           (when (< i param-count)
-                             (let [j (unchecked-inc i)]
-                               (if (< i types-count)
-                                 (let [param-key  (aget param-keys i)
-                                       param-type (aget param-types i)]
-                                   (try
-                                     (set-param-value! prepared-statement j param-type (get params i))
-                                     (catch RuntimeException e
-                                       (throw (ex-info (str "Error setting parameter #" j " (" param-key "): "
-                                                         (.getMessage e))
-                                                {:param-index j :param-key param-key} e)))))
-                                 (try
-                                   (set-param-value! prepared-statement j t/sql-nil (get params i))
-                                   (catch RuntimeException e
-                                     (throw (ex-info (str "Error setting parameter #" j ": " (.getMessage e))
-                                              {:param-index j} e)))))
-                               (recur j)))))
-      (nil? params)    nil
-      :otherwise       (unexpected "map or vector" params)))
-  ([^PreparedStatement prepared-statement #_vector param-keys #_vector param-types _ params]
-    (cond
-      (map? params)    (let [param-count (count param-keys)]
-                         (loop [i (int 0)]
-                           (when (< i param-count)
-                             (let [param-key  (get param-keys i)
-                                   param-type (get param-types i)
-                                   j (unchecked-inc i)]
-                               (if (contains? params param-key)
-                                 (try
-                                   (set-param-value! prepared-statement j param-type (get params param-key))
-                                   (catch RuntimeException e
-                                     (throw (ex-info (str "Error setting parameter #" j " (" param-key "): "
-                                                       (.getMessage e))
-                                              {:param-index j :param-key param-key} e))))
-                                 (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
-                               (recur j)))))
-      (vector? params) (let [types-count (count param-keys)
-                             param-count (count params)]
-                         (loop [i (int 0)]
-                           (when (< i param-count)
-                             (let [j (unchecked-inc i)]
-                               (if (< i types-count)
-                                 (let [param-key  (get param-keys i)
-                                       param-type (get param-types i)]
-                                   (try
-                                     (set-param-value! prepared-statement j param-type (get params i))
-                                     (catch RuntimeException e
-                                       (throw (ex-info (str "Error setting parameter #" j " (" param-key "): "
-                                                         (.getMessage e))
-                                                {:param-index j :param-key param-key} e))))
-                                   (try
-                                     (set-param-value! prepared-statement j t/sql-nil (get params i))
-                                     (catch RuntimeException e
-                                       (throw (ex-info (str "Error setting parameter #" j ": " (.getMessage e))
-                                                {:param-index j} e))))))
-                               (recur j)))))
-      (nil? params)    nil
-      :otherwise       (unexpected "map or vector" params))))
+(defn set-params-vec!
+  "Given a prepared statement and params vector, set the params in a positional order."
+  ([^PreparedStatement prepared-statement params-vec]
+    (let [param-count (count params-vec)]
+      (loop [i (int 0)]
+        (when (< i param-count)
+          (let [j (unchecked-inc i)]
+            (set-param-value! prepared-statement j (get params-vec i))
+            (recur j))))))
+  ([^PreparedStatement prepared-statement param-types params-vec]
+    (let [types-count (count param-types)
+          param-count (count params-vec)]
+      (loop [i (int 0)]
+        (when (< i param-count)
+          (let [j (unchecked-inc i)]
+            (if (< i types-count)
+              (let [param-type (get param-types i)]
+                (try
+                  (set-param-value! prepared-statement j param-type (get params-vec i))
+                  (catch RuntimeException e
+                    (throw (ex-info (str "Error setting parameter #" j ": "
+                                      (.getMessage e))
+                             {:param-index j} e)))))
+              (try
+                (set-param-value! prepared-statement j t/sql-nil (get params-vec i))
+                (catch RuntimeException e
+                  (throw (ex-info (str "Error setting parameter #" j ": " (.getMessage e))
+                           {:param-index j} e)))))
+            (recur j)))))))
+
+
+(defn set-params-map!
+  [^PreparedStatement prepared-statement param-keys param-types params]
+  (let [param-count (count param-keys)]
+    (loop [i (int 0)]
+      (when (< i param-count)
+        (let [param-key  (get param-keys i)
+              param-type (get param-types i)
+              j (unchecked-inc i)]
+          (if (contains? params param-key)
+            (try
+              (set-param-value! prepared-statement j param-type (get params param-key))
+              (catch RuntimeException e
+                (throw (ex-info (str "Error setting parameter #" j " (" param-key "): "
+                                  (.getMessage e))
+                         {:param-index j :param-key param-key} e))))
+            (illegal-arg "No value found for key:" param-key "in" (pr-str params)))
+          (recur j))))))
 
 
 ;; ----- result-set stuff -----
@@ -606,7 +576,11 @@
   ;;=========
   (get-sql    [template] (.-sql template))
   (set-params [template ^PreparedStatement prepared-statement params]
-    (set-params! prepared-statement ^objects (.-param-keys template) ^bytes (.-param-types template) params))
+    (cond
+      (map? params)    (set-params-map! prepared-statement (.-param-keys template) (.-param-types template) params)
+      (vector? params) (set-params-vec! prepared-statement (.-param-types template) params)
+      (nil? params)    nil
+      :otherwise       (expected "map, vector or nil" params)))
   (read-col   [template ^ResultSet result-set ^long column-index]
     (let [^bytes types (.-result-types template)]
       (if (pos? (alength types))
@@ -623,10 +597,17 @@
   ;;===========
   (get-sql    [m] (:sql m))
   (set-params [m ^PreparedStatement prepared-statement params]
-    (if-let [param-keys (:param-keys m)]
-      (let [param-types (or (:param-types m) (no-param-type-vec (count param-keys)))]
-        (set-params! prepared-statement param-keys param-types :vector params))
-      (set-params! prepared-statement params)))
+    (cond
+      (map? params)    (if-let [param-keys (:param-keys m)]
+                         (let [param-types (or (:param-types m) (no-param-type-vec (count param-keys)))]
+                           (set-params-map! prepared-statement param-keys param-types params))
+                         (expected "key :param-keys to be present" m))
+      (vector? params) (if-let [param-types (or (:param-types m) (when-let [param-keys (:param-keys m)]
+                                                                   (no-param-type-vec (count param-keys))))]
+                         (set-params-vec! prepared-statement param-types params)
+                         (set-params-vec! prepared-statement params))
+      (nil? params)    nil
+      :otherwise       (expected "map, vector or nil" params)))
   (read-col   [m ^ResultSet result-set ^long column-index]
     (if-let [types (:result-types m)]
       (let [column-type (get types (unchecked-dec column-index))]
@@ -640,7 +621,10 @@
   String
   ;;====
   (get-sql    [sql] sql)
-  (set-params [sql ^PreparedStatement prepared-statement params] (set-params! prepared-statement params))
+  (set-params [sql ^PreparedStatement prepared-statement params] (if (vector? params)
+                                                                   (set-params-vec! prepared-statement params)
+                                                                   (when-not (nil? params)
+                                                                     (expected "a params vector" params))))
   (read-col   [sql ^ResultSet result-set ^long column-index]     (read-column-value result-set column-index))
   (read-row   [sql ^ResultSet result-set ^long column-count]     (read-columns result-set column-count)))
 
