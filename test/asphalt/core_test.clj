@@ -187,7 +187,27 @@
     (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch nil)
                                                     :column-index 2))
              u/ds target-sql-selfew ["Joe Coder"])
-          100000))))
+          100000))
+    ;; test letcol
+    (testing "letcol"
+      (let [run-query (fn [row-maker]
+                        (a/query (partial a/fetch-single-row {:row-maker row-maker
+                                                              :on-multi (fn [_ _ v] v)})
+                          u/ds target-sql-selfew ["Joe Coder"]))]
+        (is (= vs1
+              (run-query (fn [_ rs _]
+                           (a/letcol [[name salary dept] rs]
+                             [name salary dept])))))
+        (is (= vs1
+              (run-query (fn [_ rs _]
+                           (a/letcol [[^string name ^int salary ^string dept] rs]
+                             [name salary dept])))))
+        (is (= vs1
+              (run-query (fn [_ rs _]
+                           (a/letcol [{:labels  [^string name]
+                                       :_labels [^int salary]
+                                       ^string dept 3} rs]
+                             [name salary dept])))))))))
 
 
 (deftest test-rows-template

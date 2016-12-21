@@ -147,6 +147,57 @@
 ;; ----- java.sql.ResultSet operations -----
 
 
+(defmacro letcol
+  "Destructure column values in the current row in a java.sql.ResultSet instance. Optional SQL type hints increase
+  accuracy and speed.
+
+  Sequential destructuring with implicit column index lookup:
+  (letcol [[^int foo ^string bar ^boolean baz] result-set]
+    [foo bar baz])
+
+  Associative destructuring with implicit column label lookup:
+  (letcol [{:labels  [^int foo ^string bar ^boolean baz]
+            :_labels [^date end-date ^timestamp audit-ts]]} result-set]
+    ;; :_labels turns dash to underscore when looking up by column label: end_date, audit_ts
+    [foo bar baz end-date audit-ts])
+
+  Associative destructuring with explicit column reference:
+  (letcol [{^int       foo 1  ; column index begins with 1
+            ^string    bar 2
+            ^boolean   baz 3
+            ^date      end-date \"end_date\"
+            ^timestamp audit-ts \"audit_ts\"} result-set]
+    [foo bar baz end-date audit-ts])"
+  [binding & body]
+  (i/expected vector? "a binding vector" binding)
+  (i/expected #(= 2 (count %)) "binding vector of two forms" binding)
+  (let [[lhs result-set] binding  ; LHS = Left-Hand-Side in a binding pair, for the lack of a better expression
+        result-set-sym (with-meta (gensym "result-set-") {:tag "java.sql.ResultSet"})
+        make-bindings  #(mapcat (fn [[sym col-ref]]
+                                  (i/read-column-binding sym result-set-sym col-ref)) %)]
+    (cond
+      (vector? lhs) (do (i/expected #(every? (complement #{:as '&}) %)
+                          ":as and & not to be in sequential destructuring" lhs)
+                      `(let [~result-set-sym ~result-set
+                             ~@(->> lhs
+                                 (map-indexed (fn [^long idx each] [each (inc idx)]))
+                                 make-bindings)]
+                         ~@body))
+      (map? lhs)    (let [k-bindings (fn [k f] (->> (get lhs k)
+                                                 (map #(vector % (f %)))  ; turn into pairs
+                                                 make-bindings))]
+                      (i/expected #(every? (some-fn #{:labels :_labels} (complement keyword?)) (keys %))
+                        "keyword keys to be only :labels or :_labels in associative destructuring" lhs)
+                      `(let [~result-set-sym ~result-set
+                             ~@(k-bindings :labels  str)
+                             ~@(k-bindings :_labels #(str/replace (str %) \- \_))
+                             ~@(->> (seq lhs)
+                                 (remove (comp keyword? first))  ; remove pairs where keys are keywords
+                                 make-bindings)]
+                         ~@body))
+      :otherwise    (i/expected "vector (sequential) or map (associative) destructuring form" lhs))))
+
+
 (defn fetch-maps
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps."
   ([sql-source ^ResultSet result-set]

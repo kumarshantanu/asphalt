@@ -399,6 +399,56 @@
       (expected supported-sql-types column-type))))
 
 
+(defn read-column-expr
+  "Given column-type, result-set binding symbol and column index/label, return an expression to fetch a JDBC column
+  value."
+  [column-type result-set-sym column-index-or-label]
+  (expected symbol?  "a symbol" result-set-sym)
+  (expected (some-fn string? integer?) "an integer or string" column-index-or-label)
+  (case (get sql-type-map column-type column-type)
+    #_sql-nil         0 `(read-column-value ~result-set-sym ~column-index-or-label)
+    #_sql-boolean     1 `(.getBoolean   ~result-set-sym ~column-index-or-label)
+    #_sql-byte        2 `(.getByte      ~result-set-sym ~column-index-or-label)
+    #_sql-byte-array  3 `(.getBytes     ~result-set-sym ~column-index-or-label)
+    #_sql-date        4 `(.getDate      ~result-set-sym ~column-index-or-label)
+    #_sql-double      5 `(.getDouble    ~result-set-sym ~column-index-or-label)
+    #_sql-float       6 `(.getFloat     ~result-set-sym ~column-index-or-label)
+    #_sql-int         7 `(.getInt       ~result-set-sym ~column-index-or-label)
+    #_sql-long        8 `(.getLong      ~result-set-sym ~column-index-or-label)
+    #_sql-nstring     9 `(.getNString   ~result-set-sym ~column-index-or-label)
+    #_sql-object     10 `(.getObject    ~result-set-sym ~column-index-or-label)
+    #_sql-string     11 `(.getString    ~result-set-sym ~column-index-or-label)
+    #_sql-time       12 `(.getTime      ~result-set-sym ~column-index-or-label)
+    #_sql-timestamp  13 `(.getTimestamp ~result-set-sym ~column-index-or-label)
+    (expected (str "any valid SQL type: " (keys sql-type-map)) column-type)))
+
+
+(defn read-column-binding
+  "Given a value binding symbol/LHS, result-set binding symbol and column index/label, return a vector containing the
+  correctly hinted symbol/LHS and the expression to fetch the JDBC column value."
+  [sym result-set-sym column-index-or-label]
+  (let [column-type (-> sym meta :tag keyword)]
+    [(apply vary-meta sym
+      (case (get sql-type-map column-type column-type)
+        ;; Can't type hint a local with a primitive initializer, so we dissoc the tag for primitive types
+        #_sql-nil         0 [assoc  :tag "java.lang.Object"]
+        #_sql-boolean     1 [dissoc :tag]
+        #_sql-byte        2 [dissoc :tag]
+        #_sql-byte-array  3 [assoc  :tag "bytes"]
+        #_sql-date        4 [assoc  :tag "java.sql.Date"]
+        #_sql-double      5 [dissoc :tag]
+        #_sql-float       6 [dissoc :tag]
+        #_sql-int         7 [dissoc :tag]
+        #_sql-long        8 [dissoc :tag]
+        #_sql-nstring     9 [assoc  :tag "java.lang.String"]
+        #_sql-object     10 [assoc  :tag "lava.lang.Object"]
+        #_sql-string     11 [assoc  :tag "java.lang.String"]
+        #_sql-time       12 [assoc  :tag "java.sql.Time"]
+        #_sql-timestamp  13 [assoc  :tag "java.sql.Timestamp"]
+        (expected (str "any valid SQL type: " (keys sql-type-map)) column-type)))
+    (read-column-expr column-type result-set-sym column-index-or-label)]))
+
+
 (defn read-columns
   (^objects [^ResultSet result-set ^long column-count]
     (let [^objects row (object-array column-count)]
