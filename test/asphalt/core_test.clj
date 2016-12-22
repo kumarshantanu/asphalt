@@ -102,6 +102,62 @@
 
 ;; ----- tests -----
 
+
+(defn params-helper
+  [{:keys [target-sql-count
+           target-sql-insert
+           target-sql-select
+           target-sql-selfew
+           target-sql-update
+           target-sql-delete]}]
+  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+        row (zipmap [:name :salary :dept] vs1)
+        vs2 ["Joe Coder" 110000 "Accounts"]
+        upa {:new-salary 110000
+             :dept "Accounts"}
+        upb [false "Accounts"]  ; bad params, first param should be int
+        upv [110000 "Accounts"]]
+    ;; create
+    (let [params-setter (fn [sql-source prepared-statement params]
+                          (a/lay-params prepared-statement [:string :int :string] [:name :salary :dept] params))
+          generated-key (a/genkey params-setter a/fetch-single-value
+                          u/ds target-sql-insert row)]
+      (is (= 1 generated-key) "Verify that insertion generated a key"))
+    (is (= 1 (a/query a/fetch-single-value
+               u/ds target-sql-count [])) "Verify that row was inserted")
+    ;; retrieve
+    (is (= vs1
+          (vec (a/query a/fetch-single-row
+                 u/ds target-sql-select []))))
+    (is (= vs1
+          (vec (a/query (fn [sql-source prepared-statement params]
+                          (a/lay-params prepared-statement [:string] [:name] params))
+                 a/fetch-single-row
+                 u/ds target-sql-selfew [(first vs1)]))))
+    (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
+    ;; update
+    (let [update-setter (fn [sql-source prepared-statement params]
+                          (a/lay-params prepared-statement [:int :string] [:new-salary :dept] params))]
+      (a/update update-setter
+        u/ds target-sql-update upa)
+      (testing "bad vector params"
+        (is (thrown? ExceptionInfo
+              (a/update u/ds target-sql-update upb))))
+      (testing "vanilla vector params"
+        (a/update update-setter u/ds target-sql-update upv))
+      (is (= vs2
+            (vec (a/query a/fetch-single-row
+                   u/ds target-sql-select [])))))))
+
+
+(deftest test-params-template
+  (params-helper t-all))
+
+
+(deftest test-params-map
+  (params-helper m-all))
+
+
 (defn crud-helper
   [{:keys [target-sql-count
            target-sql-insert

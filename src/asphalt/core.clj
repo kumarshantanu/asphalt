@@ -365,6 +365,64 @@
 ;; ----- convenience functions and macros -----
 
 
+(defmacro lay-params-vec
+  "Given literal SQL param types, return an expression to set vector params on a JDBC prepared statement."
+  [prepared-statement param-types params]
+  (i/expected vector? "vector of types" param-types)
+  (doseq [each-type param-types]
+    (i/expected (partial contains? i/sql-type-map)
+      (str "a valid SQL param type - either of " i/supported-sql-types) each-type))
+  (let [prepared-statement-sym (with-meta (gensym "prepared-statement-") {:tag "java.sql.PreparedStatement"})
+        params-sym  (gensym "sql-params-vec-")
+        param-count (count param-types)]
+    `(let [~params-sym ~params]
+       (i/expected vector? "SQL params vector" ~params-sym)
+       (if (<= ~param-count (count ~params-sym))
+         (let [~prepared-statement-sym ~prepared-statement]
+           ~@(map-indexed (fn [^long idx each-type]
+                            (i/lay-param-expr prepared-statement-sym each-type (inc idx) `(get ~params-sym ~idx)))
+               param-types))
+         (i/expected ~(str param-count " params") ~params-sym)))))
+
+
+(defmacro lay-params-map
+  "Given literal SQL param types and keys, return an expression to set map params on a JDBC prepared statement."
+  [prepared-statement param-types param-keys params]
+  (i/expected vector? "vector of SQL param types" param-types)
+  (doseq [each-type param-types]
+    (i/expected (partial contains? i/sql-type-map)
+      (str "a valid SQL param type - either of " i/supported-sql-types) each-type))
+  (i/expected vector? "vector of SQL param keys" param-keys)
+  (when (not= (count param-types) (count param-keys))
+    (i/expected (format "param-types (%d) and param-keys (%d) to be of the same length"
+                  (count param-types) (count param-keys)) {:param-types param-types
+                                                           :param-keys  param-keys}))
+  (let [prepared-statement-sym (with-meta (gensym "prepared-statement-") {:tag "java.sql.PreparedStatement"})
+        params-sym  (gensym "sql-params-")
+        param-count (count param-types)]
+    `(let [~params-sym ~params]
+       (if (<= ~param-count (count ~params-sym))
+         (let [~prepared-statement-sym ~prepared-statement]
+           (doseq [each-key# ~param-keys]
+             (when-not (contains? ~params-sym each-key#)
+               (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym)))
+           ~@(->> (map vector param-types param-keys)
+               (map-indexed (fn [^long idx [t k]]
+                              (i/lay-param-expr prepared-statement-sym t (inc idx) `(get ~params-sym ~k))))))
+         (i/expected ~(str param-count " params") ~params-sym)))))
+
+
+(defmacro lay-params
+  "Given literal SQL param types and keys, return an expression to set vector/map params on a JDBC prepared statement."
+  [prepared-statement param-types param-keys params]
+  (let [params-sym (gensym "sql-params-")]
+    `(let [~params-sym ~params]
+       (cond
+         (vector? ~params-sym) (lay-params-vec ~prepared-statement ~param-types ~params-sym)
+         (map? ~params-sym)    (lay-params-map ~prepared-statement ~param-types ~param-keys ~params-sym)
+         :otherwise            (i/expected "SQL params as a vector or a map" ~params-sym)))))
+
+
 (defn set-params-with-query-timeout
   "Return a params setter fn usable with asphalt.core/query, that times out on query execution and throws a
   java.sql.SQLTimeoutException instance. Supported by JDBC 4.0 (and higher) drivers only."

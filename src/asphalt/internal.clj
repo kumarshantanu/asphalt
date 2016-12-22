@@ -307,6 +307,41 @@
       (expected supported-sql-types param-type))))
 
 
+(defmacro each-param-expr
+  "Return param setter expression. Called by `set-param-expr`."
+  [setter pstmt-sym param-index type-label param-expr]
+  `(~setter ~pstmt-sym ~param-index
+     (try ~param-expr
+       (catch Exception e#
+         (throw (IllegalArgumentException.
+                  ~(format "Error resolving SQL param %d as %s: %s" param-index type-label param-expr)
+                  e#))))))
+
+
+(defn lay-param-expr
+  "Given prepared statement symbol, parm type, param index and param value symbol, return an expression to set JDBC
+  prepared statement param."
+  [pstmt-sym param-type param-index param-value-sym]
+  (case param-type
+    nil         `(param-value! ~pstmt-sym ~param-index ~param-value-sym)
+    :bool       `(each-param-expr ~'.setBoolean   ~pstmt-sym ~param-index "boolean"    (boolean    ~param-value-sym))
+    :boolean    `(each-param-expr ~'.setBoolean   ~pstmt-sym ~param-index "boolean"    (boolean    ~param-value-sym))
+    :byte       `(each-param-expr ~'.setByte      ~pstmt-sym ~param-index "byte"       (byte       ~param-value-sym))
+    :byte-array `(each-param-expr ~'.setBytes     ~pstmt-sym ~param-index "byte-array" (byte-array ~param-value-sym))
+    :date       `(each-param-expr ~'.setDate      ~pstmt-sym ~param-index "date"       ~param-value-sym)
+    :double     `(each-param-expr ~'.setDouble    ~pstmt-sym ~param-index "double"     (double     ~param-value-sym))
+    :float      `(each-param-expr ~'.setFloat     ~pstmt-sym ~param-index "float"      (float      ~param-value-sym))
+    :int        `(each-param-expr ~'.setInt       ~pstmt-sym ~param-index "int"        (int        ~param-value-sym))
+    :integer    `(each-param-expr ~'.setInt       ~pstmt-sym ~param-index "int"        (int        ~param-value-sym))
+    :long       `(each-param-expr ~'.setLong      ~pstmt-sym ~param-index "long"       (long       ~param-value-sym))
+    :nstring    `(each-param-expr ~'.setNString   ~pstmt-sym ~param-index "string"     ~param-value-sym)
+    :object     `(each-param-expr ~'.setObject    ~pstmt-sym ~param-index "object"     ~param-value-sym)
+    :string     `(each-param-expr ~'.setString    ~pstmt-sym ~param-index "string"     ~param-value-sym)
+    :time       `(each-param-expr ~'.setTime      ~pstmt-sym ~param-index "time"       ~param-value-sym)
+    :timestamp  `(each-param-expr ~'.setTimestamp ~pstmt-sym ~param-index "timestamp"  ~param-value-sym)
+    (expected supported-sql-types param-type)))
+
+
 (defn set-params-vec!
   "Given a prepared statement and params vector, set the params in a positional order."
   ([^PreparedStatement prepared-statement params-vec]

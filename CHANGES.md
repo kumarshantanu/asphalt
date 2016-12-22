@@ -19,7 +19,9 @@
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 * [TODO] Helper macros to create efficient
   * Row maker: `asphalt.core/letcol`
-  * [TODO] Params setter
+    * [TODO] optional args (as vector) in associative destructuring
+  * Params setter: `asphalt.core/lay-params`, `asphalt.core/lay-params-vec`, `asphalt.core/lay-params-map`
+    * [TODO] optional args (as vector) in param values
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
