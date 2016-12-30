@@ -18,8 +18,10 @@
 * [TODO] Add support for SQL arrays `java.sql.Array`
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 * [TODO] Helper macros to create efficient
-  * Row maker: `asphalt.core/letcol`
-    * [TODO] optional args (as vector) in associative destructuring
+  * Row maker: `asphalt.core/letcol` with support for
+    * Column types
+    * Column index/label lookup
+    * Additional arguments for specific result
   * Params setter: `asphalt.core/lay-params`, `asphalt.core/lay-params-vec`, `asphalt.core/lay-params-map`
     * [TODO] optional args (as vector) in param values
 * Queries

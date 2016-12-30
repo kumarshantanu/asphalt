@@ -149,14 +149,14 @@
 
 (defmacro letcol
   "Destructure column values in the current row in a java.sql.ResultSet instance. Optional SQL type hints increase
-  accuracy and speed.
+  accuracy and speed. The date, time and timestamp types accept an additional timezone-string/calendar argument.
 
   Sequential destructuring with implicit column index lookup:
-  (letcol [[^int foo ^string bar ^boolean baz] result-set]
+  (letcol [[^int foo ^string bar [^date baz cal]] result-set]  ; cal is TimeZone keyword/string or java.util.Calendar
     [foo bar baz])
 
   Associative destructuring with implicit column label lookup:
-  (letcol [{:labels  [^int foo ^string bar ^boolean baz]
+  (letcol [{:labels  [^int foo ^string bar [^date baz cal]]    ; cal is TimeZone keyword/string or java.util.Calendar
             :_labels [^date end-date ^timestamp audit-ts]]} result-set]
     ;; :_labels turns dash to underscore when looking up by column label: end_date, audit_ts
     [foo bar baz end-date audit-ts])
@@ -165,7 +165,7 @@
   (letcol [{^int       foo 1  ; column index begins with 1
             ^string    bar 2
             ^boolean   baz 3
-            ^date      end-date \"end_date\"
+            [^date     end-date cal] \"end_date\"              ; cal is TimeZone keyword/string or java.util.Calendar
             ^timestamp audit-ts \"audit_ts\"} result-set]
     [foo bar baz end-date audit-ts])"
   [binding & body]
@@ -184,7 +184,7 @@
                                  make-bindings)]
                          ~@body))
       (map? lhs)    (let [k-bindings (fn [k f] (->> (get lhs k)
-                                                 (map #(vector % (f %)))  ; turn into pairs
+                                                 (map #(vector % (f (first (i/as-vector %)))))  ; turn into pairs
                                                  make-bindings))]
                       (i/expected #(every? (some-fn #{:labels :_labels} (complement keyword?)) (keys %))
                         "keyword keys to be only :labels or :_labels in associative destructuring" lhs)

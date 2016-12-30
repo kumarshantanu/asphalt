@@ -265,10 +265,27 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
+                           (a/letcol [[^string name ^int salary ^string dept [^date joined :utc]] rs]
+                             [name salary dept joined])))))
+        (is (= vs1
+              (run-query (fn [_ rs _]
                            (a/letcol [{:labels  [^string name]
                                        :_labels [^int salary]
                                        ^string dept 3
                                        ^date   joined 4} rs]
+                             [name salary dept joined])))))
+        (is (= vs1
+              (run-query (fn [_ rs _]
+                           (a/letcol [{:labels  [^string name [^date joined :utc]]
+                                       :_labels [^int salary]
+                                       ^string dept 3} rs]
+                             [name salary dept joined])))))
+        (is (= vs1
+              (run-query (fn [_ rs _]
+                           (a/letcol [{:labels  [^string name]
+                                       :_labels [^int salary]
+                                       ^string dept 3
+                                       [^date   joined :utc] 4} rs]
                              [name salary dept joined])))))))))
 
 

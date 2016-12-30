@@ -18,7 +18,7 @@
                      Connection DriverManager PreparedStatement Statement
                      ResultSet ResultSetMetaData
                      Savepoint]
-    [java.util       Hashtable Map Properties]
+    [java.util       Calendar Hashtable Map Properties TimeZone]
     [java.util.regex Pattern]
     [javax.naming    Context InitialContext]
     [javax.sql       DataSource]
@@ -82,11 +82,24 @@
         (recur (unchecked-inc ~counter) (rest ~iteratee) ~@more-rest)))))
 
 
+(defn named?
+  [x]
+  (instance? clojure.lang.Named x))
+
+
 (defn as-str
   ^String [x]
-  (if (instance? clojure.lang.Named x)
-    (name x)
+  (if (named? x)
+    (->> [(namespace x) (name x)]
+      (remove nil?)
+      (str/join "/"))
     (str x)))
+
+
+(defn as-vector
+  [x]
+  (if (coll? x) (vec x)
+    [x]))
 
 
 ;; ----- type definitions -----
@@ -395,6 +408,12 @@
 ;; ----- result-set stuff -----
 
 
+(defn tz-cal
+  ^java.util.Calendar
+  [^String x]
+  (Calendar/getInstance (TimeZone/getTimeZone x)))
+
+
 (defn read-column-value
   "Read column value from given ResultSet instance and integer column-index."
   ([^ResultSet result-set ^long column-index]
@@ -437,24 +456,41 @@
 (defn read-column-expr
   "Given column-type, result-set binding symbol and column index/label, return an expression to fetch a JDBC column
   value."
-  [column-type result-set-sym column-index-or-label]
+  [column-type result-set-sym col-ref col-arg]
   (expected symbol?  "a symbol" result-set-sym)
-  (expected (some-fn string? integer?) "an integer or string" column-index-or-label)
+  (expected (some-fn string? integer?) "an integer or string column index/label" col-ref)
   (case (get sql-type-map column-type column-type)
-    #_sql-nil         0 `(read-column-value ~result-set-sym ~column-index-or-label)
-    #_sql-boolean     1 `(.getBoolean   ~result-set-sym ~column-index-or-label)
-    #_sql-byte        2 `(.getByte      ~result-set-sym ~column-index-or-label)
-    #_sql-byte-array  3 `(.getBytes     ~result-set-sym ~column-index-or-label)
-    #_sql-date        4 `(.getDate      ~result-set-sym ~column-index-or-label)
-    #_sql-double      5 `(.getDouble    ~result-set-sym ~column-index-or-label)
-    #_sql-float       6 `(.getFloat     ~result-set-sym ~column-index-or-label)
-    #_sql-int         7 `(.getInt       ~result-set-sym ~column-index-or-label)
-    #_sql-long        8 `(.getLong      ~result-set-sym ~column-index-or-label)
-    #_sql-nstring     9 `(.getNString   ~result-set-sym ~column-index-or-label)
-    #_sql-object     10 `(.getObject    ~result-set-sym ~column-index-or-label)
-    #_sql-string     11 `(.getString    ~result-set-sym ~column-index-or-label)
-    #_sql-time       12 `(.getTime      ~result-set-sym ~column-index-or-label)
-    #_sql-timestamp  13 `(.getTimestamp ~result-set-sym ~column-index-or-label)
+    #_sql-nil         0 `(read-column-value ~result-set-sym ~col-ref)
+    #_sql-boolean     1 `(.getBoolean   ~result-set-sym ~col-ref)
+    #_sql-byte        2 `(.getByte      ~result-set-sym ~col-ref)
+    #_sql-byte-array  3 `(.getBytes     ~result-set-sym ~col-ref)
+    #_sql-date        4 (cond
+                          (nil? col-arg)    `(.getDate ~result-set-sym ~col-ref)
+                          (string? col-arg) `(.getDate ~result-set-sym ~col-ref (tz-cal ~col-arg))
+                          (named? col-arg)  `(.getDate ~result-set-sym ~col-ref (tz-cal ~(as-str col-arg)))
+                          :otherwise        `(.getDate ~result-set-sym ~col-ref ~col-arg))
+    #_sql-double      5 `(.getDouble    ~result-set-sym ~col-ref)
+    #_sql-float       6 `(.getFloat     ~result-set-sym ~col-ref)
+    #_sql-int         7 `(.getInt       ~result-set-sym ~col-ref)
+    #_sql-long        8 `(.getLong      ~result-set-sym ~col-ref)
+    #_sql-nstring     9 `(.getNString   ~result-set-sym ~col-ref)
+    #_sql-object     10 (if (nil? col-arg)
+                          `(.getObject    ~result-set-sym ~col-ref)
+                          `(let [col-arg# ~col-arg]
+                             (if (class? col-arg#)
+                               (.getObject    ~result-set-sym ~col-ref ^Class col-arg#)
+                               (.getObject    ~result-set-sym ~col-ref ^Map col-arg#))))
+    #_sql-string     11 `(.getString    ~result-set-sym ~col-ref)
+    #_sql-time       12 (cond
+                          (nil? col-arg)    `(.getTime ~result-set-sym ~col-ref)
+                          (string? col-arg) `(.getTime ~result-set-sym ~col-ref (tz-cal ~col-arg))
+                          (named? col-arg)  `(.getTime ~result-set-sym ~col-ref (tz-cal ~(as-str col-arg)))
+                          :otherwise        `(.getTime ~result-set-sym ~col-ref ~col-arg))
+    #_sql-timestamp  13 (cond
+                          (nil? col-arg)    `(.getTimestamp ~result-set-sym ~col-ref)
+                          (string? col-arg) `(.getTimestamp ~result-set-sym ~col-ref (tz-cal ~col-arg))
+                          (named? col-arg)  `(.getTimestamp ~result-set-sym ~col-ref (tz-cal ~(as-str col-arg)))
+                          :otherwise        `(.getTimestamp ~result-set-sym ~col-ref ~col-arg))
     (expected (str "any valid SQL type: " (keys sql-type-map)) column-type)))
 
 
@@ -462,26 +498,27 @@
   "Given a value binding symbol/LHS, result-set binding symbol and column index/label, return a vector containing the
   correctly hinted symbol/LHS and the expression to fetch the JDBC column value."
   [sym result-set-sym column-index-or-label]
-  (let [column-type (-> sym meta :tag keyword)]
-    [(apply vary-meta sym
-      (case (get sql-type-map column-type column-type)
-        ;; Can't type hint a local with a primitive initializer, so we dissoc the tag for primitive types
-        #_sql-nil         0 [assoc  :tag "java.lang.Object"]
-        #_sql-boolean     1 [dissoc :tag]
-        #_sql-byte        2 [dissoc :tag]
-        #_sql-byte-array  3 [assoc  :tag "bytes"]
-        #_sql-date        4 [assoc  :tag "java.sql.Date"]
-        #_sql-double      5 [dissoc :tag]
-        #_sql-float       6 [dissoc :tag]
-        #_sql-int         7 [dissoc :tag]
-        #_sql-long        8 [dissoc :tag]
-        #_sql-nstring     9 [assoc  :tag "java.lang.String"]
-        #_sql-object     10 [assoc  :tag "lava.lang.Object"]
-        #_sql-string     11 [assoc  :tag "java.lang.String"]
-        #_sql-time       12 [assoc  :tag "java.sql.Time"]
-        #_sql-timestamp  13 [assoc  :tag "java.sql.Timestamp"]
-        (expected (str "any valid SQL type: " (keys sql-type-map)) column-type)))
-    (read-column-expr column-type result-set-sym column-index-or-label)]))
+  (let [[col-sym col-arg] (as-vector sym)
+        column-type (-> col-sym meta :tag keyword)]
+    [(apply vary-meta col-sym
+       (case (get sql-type-map column-type column-type)
+         ;; Can't type hint a local with a primitive initializer, so we dissoc the tag for primitive types
+         #_sql-nil         0 [assoc  :tag "java.lang.Object"]
+         #_sql-boolean     1 [dissoc :tag]
+         #_sql-byte        2 [dissoc :tag]
+         #_sql-byte-array  3 [assoc  :tag "bytes"]
+         #_sql-date        4 [assoc  :tag "java.sql.Date"]
+         #_sql-double      5 [dissoc :tag]
+         #_sql-float       6 [dissoc :tag]
+         #_sql-int         7 [dissoc :tag]
+         #_sql-long        8 [dissoc :tag]
+         #_sql-nstring     9 [assoc  :tag "java.lang.String"]
+         #_sql-object     10 [assoc  :tag "lava.lang.Object"]
+         #_sql-string     11 [assoc  :tag "java.lang.String"]
+         #_sql-time       12 [assoc  :tag "java.sql.Time"]
+         #_sql-timestamp  13 [assoc  :tag "java.sql.Timestamp"]
+         (expected (str "any valid SQL type: " (keys sql-type-map)) column-type)))
+     (read-column-expr column-type result-set-sym column-index-or-label col-arg)]))
 
 
 (defn read-columns
