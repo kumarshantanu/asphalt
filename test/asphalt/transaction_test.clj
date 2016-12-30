@@ -35,10 +35,11 @@
            target-sql-selfew
            target-sql-update
            target-sql-delete]}]
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
-        vs2 ["Harry Hacker" 90000 "R&D"]]
+        vs2 ["Harry Hacker" 90000 "R&D" jd1]]
     ;; insert one record
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
@@ -65,10 +66,11 @@
            target-sql-selfew
            target-sql-update
            target-sql-delete]}]
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
-        vs2 ["Harry Hacker" 90000 "R&D"]]
+        vs2 ["Harry Hacker" 90000 "R&D" jd1]]
     ;; insert one record
     (a/genkey u/ds target-sql-insert vs1)
     ;; transaction that commits
@@ -96,10 +98,11 @@
 ;; ----- propagation tests -----
 
 
-(def vs1 ["Joe Coder"     100000 "Accounts"])
-(def vs2 ["Harry Hacker"   90000 "R&D"])
-(def vs3 ["Neal Designer"  85000 "UX"])
-(def vs4 ["Susan Manager" 135000 "Customer delivery"])
+(def jd1 (u/make-date))
+(def vs1 ["Joe Coder"     100000 "Accounts" jd1])
+(def vs2 ["Harry Hacker"   90000 "R&D" jd1])
+(def vs3 ["Neal Designer"  85000 "UX" jd1])
+(def vs4 ["Susan Manager" 135000 "Customer delivery" jd1])
 
 
 (defn find-count [] (a/query a/fetch-single-value

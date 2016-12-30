@@ -21,6 +21,6 @@
              :perf {:dependencies [[citius "0.2.4"]
                                    [org.clojure/java.jdbc "0.7.0-alpha1"]]
                     :test-paths ["perf"]}}
-  :jvm-opts ^:replace ["-server" "-Xms2048m" "-Xmx2048m"]
+  :jvm-opts ^:replace ["-server" "-Xms2048m" "-Xmx2048m" #_FIXME "-Duser.timezone=UTC"]
   :global-vars {*warn-on-reflection* true
                 *assert* true})

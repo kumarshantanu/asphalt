@@ -15,7 +15,7 @@
     [asphalt.type      :as t]
     [asphalt.transaction :as x])
   (:import
-    [java.sql SQLTimeoutException]
+    [java.sql Date SQLTimeoutException]
     [clojure.lang ExceptionInfo]))
 
 
@@ -41,15 +41,16 @@
 
 (a/defsql t-count  "SELECT COUNT(*) FROM emp")
 
-(a/defsql t-insert "INSERT INTO emp (name, salary, dept) VALUES (^string $name, ^int $salary, ^string $dept)")
+(a/defsql t-insert "INSERT INTO emp (name, salary, dept, joined)
+VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 
 (a/defsql t-select "SELECT ^string name, -- ^int age,
 -- ^boolean gender,
-^int salary, ^string dept FROM emp")
+^int salary, ^string dept, ^date joined FROM emp")
 
-(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept FROM emp WHERE name = ?")
+(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?")
 
-(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept FROM emp WHERE name = ?"
+(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
   a/fetch-single-row {})
 
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
@@ -110,16 +111,18 @@
            target-sql-selfew
            target-sql-update
            target-sql-delete]}]
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
-        row (zipmap [:name :salary :dept] vs1)
-        vs2 ["Joe Coder" 110000 "Accounts"]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
+        row (zipmap [:name :salary :dept :joined] vs1)
+        vs2 ["Joe Coder" 110000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
         upb [false "Accounts"]  ; bad params, first param should be int
         upv [110000 "Accounts"]]
     ;; create
     (let [params-setter (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:string :int :string] [:name :salary :dept] params))
+                          (a/lay-params prepared-statement [:string :int :string :date] [:name :salary :dept :joined]
+                            params))
           generated-key (a/genkey params-setter a/fetch-single-value
                           u/ds target-sql-insert row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
@@ -165,9 +168,10 @@
            target-sql-selfew
            target-sql-update
            target-sql-delete]}]
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
-        row (zipmap [:name :salary :dept] vs1)
-        vs2 ["Joe Coder" 110000 "Accounts"]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
+        row (zipmap [:name :salary :dept :joined] vs1)
+        vs2 ["Joe Coder" 110000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
         upb [false "Accounts"]  ; bad params, first param should be int
@@ -216,8 +220,9 @@
            target-sql-selfew
            target-sql-update
            target-sql-delete]}]
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
-        row (zipmap [:name :salary :dept] vs1)]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
+        row (zipmap [:name :salary :dept :joined] vs1)]
     ;; fetch single row in absence of rows
     (is (= (vec (a/query (partial a/fetch-single-row (a/default-fetch vs1))
                   u/ds target-sql-select []))
@@ -252,18 +257,19 @@
                           u/ds target-sql-selfew ["Joe Coder"]))]
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [[name salary dept] rs]
-                             [name salary dept])))))
+                           (a/letcol [[name salary dept joined] rs]
+                             [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [[^string name ^int salary ^string dept] rs]
-                             [name salary dept])))))
+                           (a/letcol [[^string name ^int salary ^string dept ^date joined] rs]
+                             [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
                            (a/letcol [{:labels  [^string name]
                                        :_labels [^int salary]
-                                       ^string dept 3} rs]
-                             [name salary dept])))))))))
+                                       ^string dept 3
+                                       ^date   joined 4} rs]
+                             [name salary dept joined])))))))))
 
 
 (deftest test-rows-template
@@ -310,8 +316,9 @@
 
 
 (deftest test-query-timeout
-  (let [vs1 ["Joe Coder" 100000 "Accounts"]
-        row (zipmap [:name :salary :dept] vs1)]
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
+        row (zipmap [:name :salary :dept :joined] vs1)]
     (let [generated-key (a/genkey u/delay-ds t-insert row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
     (is (thrown? SQLTimeoutException

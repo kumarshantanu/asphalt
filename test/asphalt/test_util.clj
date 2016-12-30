@@ -14,7 +14,8 @@
     [clj-dbcp.core   :as d]
     [asphalt.core    :as a])
   (:import
-    [java.util Date Calendar]
+    [java.sql Date]
+    [java.util Calendar]
     [asphalt.type StmtCreationEvent SQLExecutionEvent]))
 
 
@@ -130,3 +131,12 @@
 (defn drop-db
   []
   (a/update ds (:drop-ddl config) []))
+
+
+(defn make-date
+  "Return a Date instance with the time component stripped."
+  []
+  (-> (System/currentTimeMillis)
+    (quot 86400000)  ; strip hours/minutes/seconds/milliseconds
+    (* 86400000)     ; and pad them up with zeros
+    (Date.)))

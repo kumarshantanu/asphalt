@@ -7,6 +7,7 @@
     id     INT PRIMARY KEY AUTO_INCREMENT,
     name   VARCHAR(50) NOT NULL,
     salary INT NOT NULL,
-    dept   VARCHAR(50)
+    dept   VARCHAR(50),
+    joined DATE
 )"
  :drop-ddl "DROP TABLE emp"}
