@@ -249,6 +249,13 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                                                     :column-index 2))
              u/ds target-sql-selfew ["Joe Coder"])
           100000))
+    ;; test lay-params
+    (a/update (fn [sql-source pstmt params]
+                (a/lay-params pstmt [:string :int :string :date] [:name :salary :dept :joined]
+                  (update-in params [:joined] vector :utc)))
+      u/ds target-sql-insert row)
+    (is (= 51 (a/query a/fetch-single-value
+                u/ds target-sql-count [])) "Verify that row was inserted")
     ;; test letcol
     (testing "letcol"
       (let [run-query (fn [row-maker]
