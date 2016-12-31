@@ -387,40 +387,52 @@
 
 (defmacro lay-params-map
   "Given literal SQL param types and keys, return an expression to set map params on a JDBC prepared statement."
-  [prepared-statement param-types param-keys params]
-  (i/expected vector? "vector of SQL param types" param-types)
-  (doseq [each-type param-types]
-    (i/expected (partial contains? i/sql-type-map)
-      (str "a valid SQL param type - either of " i/supported-sql-types) each-type))
-  (i/expected vector? "vector of SQL param keys" param-keys)
-  (when (not= (count param-types) (count param-keys))
-    (i/expected (format "param-types (%d) and param-keys (%d) to be of the same length"
-                  (count param-types) (count param-keys)) {:param-types param-types
-                                                           :param-keys  param-keys}))
-  (let [prepared-statement-sym (with-meta (gensym "prepared-statement-") {:tag "java.sql.PreparedStatement"})
-        params-sym  (gensym "sql-params-")
-        param-count (count param-types)]
-    `(let [~params-sym ~params]
-       (if (<= ~param-count (count ~params-sym))
-         (let [~prepared-statement-sym ~prepared-statement]
-           (doseq [each-key# ~param-keys]
-             (when-not (contains? ~params-sym each-key#)
-               (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym)))
-           ~@(->> (map vector param-types param-keys)
-               (map-indexed (fn [^long idx [t k]]
-                              (i/lay-param-expr prepared-statement-sym t (inc idx) `(get ~params-sym ~k))))))
-         (i/expected ~(str param-count " params") ~params-sym)))))
+  ([prepared-statement param-keys param-types params]
+    (i/expected vector? "vector of SQL param keys" param-keys)
+    (i/expected vector? "vector of SQL param types" param-types)
+    (doseq [each-type param-types]
+      (i/expected (partial contains? i/sql-type-map)
+        (str "a valid SQL param type - either of " i/supported-sql-types) each-type))
+    (when (not= (count param-types) (count param-keys))
+      (i/expected (format "param-types (%d) and param-keys (%d) to be of the same length"
+                    (count param-types) (count param-keys)) {:param-types param-types
+                                                             :param-keys  param-keys}))
+    (let [prepared-statement-sym (with-meta (gensym "prepared-statement-") {:tag "java.sql.PreparedStatement"})
+          params-sym  (gensym "sql-params-")
+          param-count (count param-types)]
+      `(let [~params-sym ~params]
+         (if (<= ~param-count (count ~params-sym))
+           (let [~prepared-statement-sym ~prepared-statement]
+             (doseq [each-key# ~param-keys]
+               (when-not (contains? ~params-sym each-key#)
+                 (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym)))
+             ~@(->> (map vector param-types param-keys)
+                 (map-indexed (fn [^long idx [t k]]
+                                (i/lay-param-expr prepared-statement-sym t (inc idx) `(get ~params-sym ~k))))))
+           (i/expected ~(str param-count " params") ~params-sym)))))
+  ([prepared-statement param-key-type-pairs params]
+    (i/expected vector? "vector of SQL param key/type pairs" param-key-type-pairs)
+    (i/expected (comp even? count) "even number of elements in SQL param key/type pairs" param-key-type-pairs)
+    `(lay-params-map ~prepared-statement ~@(let [pairs (partition 2 param-key-type-pairs)]
+                                             [(mapv first pairs) (mapv second pairs)])
+       ~params)))
 
 
 (defmacro lay-params
   "Given literal SQL param types and keys, return an expression to set vector/map params on a JDBC prepared statement."
-  [prepared-statement param-types param-keys params]
-  (let [params-sym (gensym "sql-params-")]
-    `(let [~params-sym ~params]
-       (cond
-         (vector? ~params-sym) (lay-params-vec ~prepared-statement ~param-types ~params-sym)
-         (map? ~params-sym)    (lay-params-map ~prepared-statement ~param-types ~param-keys ~params-sym)
-         :otherwise            (i/expected "SQL params as a vector or a map" ~params-sym)))))
+  ([prepared-statement param-keys param-types params]
+    (let [params-sym (gensym "sql-params-")]
+      `(let [~params-sym ~params]
+         (cond
+           (vector? ~params-sym) (lay-params-vec ~prepared-statement ~param-types ~params-sym)
+           (map? ~params-sym)    (lay-params-map ~prepared-statement ~param-keys ~param-types ~params-sym)
+           :otherwise            (i/expected "SQL params as a vector or a map" ~params-sym)))))
+  ([prepared-statement param-key-type-pairs params]
+    (i/expected vector? "vector of SQL param key/type pairs" param-key-type-pairs)
+    (i/expected (comp even? count) "even number of elements in SQL param key/type pairs" param-key-type-pairs)
+    `(lay-params ~prepared-statement ~@(let [pairs (partition 2 param-key-type-pairs)]
+                                         [(mapv first pairs) (mapv second pairs)])
+       ~params)))
 
 
 (defn set-params-with-query-timeout

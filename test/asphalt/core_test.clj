@@ -121,7 +121,10 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
         upv [110000 "Accounts"]]
     ;; create
     (let [params-setter (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:string :int :string :date] [:name :salary :dept :joined]
+                          (a/lay-params prepared-statement [:name   :string
+                                                            :salary :int
+                                                            :dept   :string
+                                                            :joined :date]
                             params))
           generated-key (a/genkey params-setter a/fetch-single-value
                           u/ds target-sql-insert row)]
@@ -134,13 +137,14 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                  u/ds target-sql-select []))))
     (is (= vs1
           (vec (a/query (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:string] [:name] params))
+                          (a/lay-params prepared-statement [:name :string] params))
                  a/fetch-single-row
                  u/ds target-sql-selfew [(first vs1)]))))
     (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (let [update-setter (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:int :string] [:new-salary :dept] params))]
+                          (a/lay-params prepared-statement [:new-salary :int
+                                                            :dept       :string] params))]
       (a/update update-setter
         u/ds target-sql-update upa)
       (testing "bad vector params"
@@ -251,7 +255,10 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
           100000))
     ;; test lay-params
     (a/update (fn [sql-source pstmt params]
-                (a/lay-params pstmt [:string :int :string :date] [:name :salary :dept :joined]
+                (a/lay-params pstmt [:name   :string
+                                     :salary :int
+                                     :dept   :string
+                                     :joined :date]
                   (update-in params [:joined] vector :utc)))
       u/ds target-sql-insert row)
     (is (= 51 (a/query a/fetch-single-value
