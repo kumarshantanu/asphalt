@@ -3,6 +3,7 @@
 ## TODO and Ideas
 
 * [TODO] Support stored procedure call
+* [TODO] Support for more parameter types
 
 
 ## 0.5.0 / 2016-December-??
@@ -15,15 +16,14 @@
   * [TODO] Deprecate `defquery`
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
-* [TODO] Add support for SQL arrays `java.sql.Array`
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 * Helper macros to create efficient
   * Row maker: `asphalt.core/letcol` with support for
     * Column types
     * Column index/label lookup
     * Additional arguments for specific result
-  * Params setter in `asphalt.core` namespace: `lay-params`, `lay-params-vec`, `lay-params-map` with support for
-    * Param types
+  * Params setter in `asphalt.param` namespace: `lay-params`, `lay-params-vec`, `lay-params-map` with support for
+    * Param types - both single-value and multi-value
     * Param position/name reference
     * Additional arguments (as vector) for specific format
 * Queries

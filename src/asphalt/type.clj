@@ -58,6 +58,10 @@
 (def ^:const sql-timestamp 13)
 
 
+(def ^:const sql-multi-bit 64)
+(def ^:const sql-type-bits 63)
+
+
 (defrecord StmtCreationEvent [^String sql
                               ;; #{:statement :prepared-statement :prepared-call}
                               jdbc-stmt-type])

@@ -12,6 +12,7 @@
     [clojure.test :refer :all]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
+    [asphalt.param     :as p]
     [asphalt.type      :as t]
     [asphalt.transaction :as x])
   (:import
@@ -121,7 +122,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
         upv [110000 "Accounts"]]
     ;; create
     (let [params-setter (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:name   :string
+                          (p/lay-params prepared-statement [:name   :string
                                                             :salary :int
                                                             :dept   :string
                                                             :joined :date]
@@ -137,13 +138,13 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                  u/ds target-sql-select []))))
     (is (= vs1
           (vec (a/query (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:name :string] params))
+                          (p/lay-params prepared-statement [:name :string] params))
                  a/fetch-single-row
                  u/ds target-sql-selfew [(first vs1)]))))
     (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (let [update-setter (fn [sql-source prepared-statement params]
-                          (a/lay-params prepared-statement [:new-salary :int
+                          (p/lay-params prepared-statement [:new-salary :int
                                                             :dept       :string] params))]
       (a/update update-setter
         u/ds target-sql-update upa)
@@ -255,11 +256,11 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
           100000))
     ;; test lay-params
     (a/update (fn [sql-source pstmt params]
-                (a/lay-params pstmt [:name   :string
+                (p/lay-params pstmt [:name   :string
                                      :salary :int
                                      :dept   :string
                                      :joined :date]
-                  (update-in params [:joined] vector :utc)))
+                  (update-in params [:joined] p/date->cal :utc)))
       u/ds target-sql-insert row)
     (is (= 51 (a/query a/fetch-single-value
                 u/ds target-sql-count [])) "Verify that row was inserted")
