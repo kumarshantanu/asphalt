@@ -18,16 +18,11 @@
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 * Params setter utility in `asphalt.param` namespace
-  * Macro `lay-params` with support for
-    * Available at macro-expansion time (efficient)
-    * Param types (single-value and multi-value)
-    * Param position/name reference (vector/map/nil params)
-    * Additional coercion arguments
-  * Function `set-params` with run time support for
-    * Available at run time (flexible)
-    * Param types (single-value and multi-value)
-    * Param position/name reference (vector/map/nil params)
-    * Additional coercion arguments
+  * Macro `lay-params` (available at macro-expansion time, efficient)
+  * Function `set-params` (available at run time, flexible)
+  * Param types (single-value and multi-value)
+  * Param position/name reference (vector/map/nil params)
+  * Additional coercion arguments
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
