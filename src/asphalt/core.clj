@@ -313,7 +313,7 @@
   ([params-setter result-set-worker connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-source) false)]
+                                             (t/get-sql sql-source params) false)]
         (params-setter sql-source pstmt params)
         (with-open [^ResultSet result-set (.executeQuery pstmt)]
           (result-set-worker sql-source result-set))))))
@@ -329,7 +329,7 @@
   ([params-setter result-set-worker connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-source) true)]
+                                             (t/get-sql sql-source params) true)]
         (params-setter sql-source pstmt params)
         (.executeUpdate pstmt)
         (with-open [^ResultSet generated-keys (.getGeneratedKeys pstmt)]
@@ -343,7 +343,7 @@
   ([params-setter connection-source sql-source params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-source) false)]
+                                             (t/get-sql sql-source params) false)]
         (params-setter sql-source pstmt params)
         (.executeUpdate pstmt)))))
 
@@ -355,7 +355,7 @@
   ([params-setter connection-source sql-source batch-params]
     (i/with-connection [connection connection-source]
       (with-open [^PreparedStatement pstmt (i/prepare-statement connection
-                                             (t/get-sql sql-source) false)]
+                                             (t/get-sql sql-source (first batch-params)) false)]
         (doseq [params batch-params]
           (params-setter sql-source pstmt params)
           (.addBatch pstmt))

@@ -648,7 +648,7 @@
   ;;=========
   SQLTemplateStatic
   ;;=========
-  (get-sql    [template] (.-sql template))
+  (get-sql    [template params] (.-sql template))
   (set-params [template ^PreparedStatement prepared-statement params]
     (cond
       (map? params)    (set-params-map! prepared-statement (.-param-keys template) (.-param-types template) params)
@@ -669,7 +669,7 @@
   ;;===========
   java.util.Map
   ;;===========
-  (get-sql    [m] (:sql m))
+  (get-sql    [m params] (:sql m))
   (set-params [m ^PreparedStatement prepared-statement params]
     (cond
       (map? params)    (if-let [param-keys (:param-keys m)]
@@ -694,7 +694,7 @@
   ;;====
   String
   ;;====
-  (get-sql    [sql] sql)
+  (get-sql    [sql params] sql)
   (set-params [sql ^PreparedStatement prepared-statement params] (if (vector? params)
                                                                    (set-params-vec! prepared-statement params)
                                                                    (when-not (nil? params)
@@ -781,17 +781,13 @@
 
 (defn on-empty-rows
   [sql-source ^ResultSet result-set]
-  (let [sql (t/get-sql sql-source)]
-    (throw
-      (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL: "
-                 sql)
-        {:sql sql :empty? true}))))
+  (throw
+    (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL-source: " (pr-str sql-source))
+      {:sql-source sql-source :empty? true})))
 
 
 (defn on-multi-rows
   [sql-source ^ResultSet result-set value]
-  (let [sql (t/get-sql sql-source)]
-    (throw
-      (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL: "
-                 sql)
-        {:sql sql :multi? true}))))
+  (throw
+    (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL-source: " (pr-str sql-source))
+      {:sql-source sql-source :multi? true})))

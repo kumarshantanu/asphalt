@@ -17,6 +17,8 @@
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
+* Types/Protocols
+  * [BREAKING CHANGE] Now `asphalt.type.ISqlSource/get-sql` accepts params as argument (for dynamic SQL)
 * Params setter utility in `asphalt.param` namespace
   * Macro `lay-params` (available at macro-expansion time, efficient)
   * Function `set-params` (available at run time, flexible)
