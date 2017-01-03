@@ -112,31 +112,15 @@
 ;; ----- multi param helpers -----
 
 
-(defn params-vec-indices
-  [param-types-vec params-sym]
-  (i/expected vector? "a vector of param types" param-types-vec)
-  (if (every? sql-single-type-map param-types-vec)
-    (->> (iterate inc 1)
-      (take (count param-types-vec))
-      (apply vector-of :int))
-    (let [multi-counts (map-indexed (fn [^long idx pt]
-                                      (if (contains? sql-single-type-map pt)
-                                        `1
-                                        `(count (get ~params-sym ~idx))))
-                         param-types-vec)]
-      `(reduce (fn [cv# ^long pcount#]
-                 (conj cv# (unchecked-add (last cv#) pcount#)))
-         (vector-of :int 1)
-         [~@multi-counts]))))
-
-
-(defn params-map-indices
+(defn params-indices
   [param-keys-vec param-types-vec params-sym]
   (i/expected vector? "a vector of param keys" param-keys-vec)
   (i/expected vector? "a vector of param types" param-types-vec)
   (when-not (= (count param-keys-vec) (count param-types-vec))
-    (i/expected "param keys and param types to be of same length" {:param-keys param-keys-vec
-                                                                   :param-types param-types-vec}))
+    (i/expected (format "param keys (%d) and param types (%d) to be of same length"
+                  (count param-keys-vec) (count param-types-vec))
+      {:param-keys param-keys-vec
+       :param-types param-types-vec}))
   (if (every? sql-single-type-map param-types-vec)
     (->> (iterate inc 1)
       (take (count param-types-vec))
