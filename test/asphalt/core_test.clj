@@ -264,6 +264,16 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
       u/ds target-sql-insert row)
     (is (= 51 (a/query a/fetch-single-value
                 u/ds target-sql-count [])) "Verify that row was inserted")
+    ;; test set-params
+    (a/update (fn [sql-source pstmt params]
+                (p/set-params pstmt [:name   :string
+                                     :salary :int
+                                     :dept   :string
+                                     :joined :date]
+                  (update-in params [:joined] p/date->cal :utc)))
+      u/ds target-sql-insert row)
+    (is (= 52 (a/query a/fetch-single-value
+                u/ds target-sql-count [])) "Verify that row was inserted")
     ;; test letcol
     (testing "letcol"
       (let [run-query (fn [row-maker]

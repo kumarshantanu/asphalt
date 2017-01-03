@@ -40,7 +40,7 @@
     (.setTimeInMillis (.getTime timestamp))))
 
 
-;; ----- lay params for known SQL types ----- TODO: support for multi-params in lay-params
+;; ----- lay SQL params for known SQL types -----
 
 
 (defmacro lay-params-vec
@@ -130,3 +130,52 @@
     `(lay-params ~prepared-statement ~@(let [pairs (partition 2 param-key-type-pairs)]
                                          [(mapv first pairs) (mapv second pairs)])
        ~params)))
+
+
+;; ----- set SQL params at runtime -----
+
+
+(def default-param-types (repeat nil))
+
+
+(defn param-keys
+  "Given a vector/map/nil of SQL params return param keys for use with `set-params`."
+  [params]
+  (if (vector? params)
+    (pi/cached-indices (count params))
+    (keys params)))
+
+
+(defn set-params
+  "Given prepared statement and a vector/map/nil of SQL params, set the params at runtime.
+  See:
+    asphalt.param/default-param-types
+    asphalt.param/param-keys"
+  ([^PreparedStatement prepared-statement params]
+    (set-params
+      prepared-statement (param-keys params) default-param-types params))
+  ([^PreparedStatement prepared-statement param-key-type-pairs params]
+    (let [[param-keys param-types] (let [pairs (partition 2 param-key-type-pairs)]
+                                     [(mapv first pairs) (mapv second pairs)])]
+      (set-params
+        prepared-statement param-keys param-types params)))
+  ([^PreparedStatement prepared-statement param-keys param-types params]
+    (loop [pi 1  ; param index
+           ks (seq param-keys)
+           ts (seq param-types)]
+      (when ks
+        (let [k (first ks)]
+          (if (contains? params k)
+            (let [t (first ts)
+                  v (get params k)]
+              (if-let [single-type (get pi/sql-multi-single-map t)]  ; multi-value param?
+                (let [k (count v)]  ; iterate over all values of multi-value param
+                  (loop [i 0]
+                    (when (< i k)
+                      (pi/set-param-value prepared-statement single-type (unchecked-add pi i) (get v i))
+                      (recur (unchecked-inc i))))
+                  (recur (unchecked-add pi k) (next ks) (next ts)))
+                (do
+                  (pi/set-param-value prepared-statement t pi v)
+                  (recur (unchecked-inc pi) (next ks) (next ts)))))
+            (i/illegal-arg "No value found for key:" k "in" (pr-str params))))))))

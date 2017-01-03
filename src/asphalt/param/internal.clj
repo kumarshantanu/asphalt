@@ -13,7 +13,7 @@
     [asphalt.type :as t])
   (:import
     [java.util Calendar TimeZone]
-    [java.sql Date Time Timestamp]))
+    [java.sql Date PreparedStatement Time Timestamp]))
 
 
 (def sql-single-type-map {nil         t/sql-nil
@@ -58,6 +58,23 @@
                          :strings     (bit-or t/sql-multi-bit t/sql-string)
                          :times       (bit-or t/sql-multi-bit t/sql-time)
                          :timestamps  (bit-or t/sql-multi-bit t/sql-timestamp)})
+
+
+(def sql-multi-single-map {:bools       :bool
+                           :booleans    :boolean
+                           :bytes       :byte
+                           :byte-arrays :byte-array
+                           :dates       :date
+                           :doubles     :double
+                           :floats      :float
+                           :ints        :int
+                           :integers    :integer
+                           :longs       :long
+                           :nstrings    :nstring
+                           :objects     :object
+                           :strings     :string
+                           :times       :time
+                           :timestamps  :timestamp})
 
 
 (def sql-all-types-map (merge sql-single-type-map sql-multi-type-map))
@@ -210,3 +227,41 @@
                          (nil? p#)    (.setTimestamp ~pstmt-sym ~pindex-sym nil)
                          :otherwise   (i/expected "java.sql.Timestamp or java.util.Calendar instance" p#)))
         (i/expected (str "a valid SQL param type - either of " sql-single-type-keys) param-type)))))
+
+
+(defn set-param-value
+  [^PreparedStatement prepared-statement param-type ^long param-index param-value]
+  (case param-type
+    nil         (if (instance? clojure.lang.BigInt param-value)
+                  (.setLong   prepared-statement param-index ^long (long param-value))
+                  (.setObject prepared-statement param-index ^Object param-value))
+    :bool       (.setBoolean   prepared-statement param-index (boolean    param-value))
+    :boolean    (.setBoolean   prepared-statement param-index (boolean    param-value))
+    :byte       (.setByte      prepared-statement param-index (byte       param-value))
+    :byte-array (.setBytes     prepared-statement param-index (byte-array param-value))
+    :date       (if (instance? Calendar param-value)
+                  (.setDate    prepared-statement param-index (Date. (.getTimeInMillis ^Calendar param-value))
+                    ^Calendar param-value)
+                  (.setDate    prepared-statement param-index ^java.sql.Date param-value))
+    :double     (.setDouble    prepared-statement param-index (double     param-value))
+    :float      (.setFloat     prepared-statement param-index (float      param-value))
+    :int        (.setInt       prepared-statement param-index (int        param-value))
+    :integer    (.setInt       prepared-statement param-index (int        param-value))
+    :long       (.setLong      prepared-statement param-index (long       param-value))
+    :nstring    (.setNString   prepared-statement param-index ^String param-value)
+    :object     (.setObject    prepared-statement param-index ^Object param-value)
+    :string     (.setString    prepared-statement param-index ^String param-value)
+    :time       (if (instance? Calendar param-value)
+                  (.setTime      prepared-statement param-index (Time. (.getTimeInMillis ^Calendar param-value))
+                    ^Calendar param-value)
+                  (.setTime      prepared-statement param-index ^java.sql.Time param-value))
+    :timestamp  (if (instance? Calendar param-value)
+                  (.setTimestamp prepared-statement param-index (Timestamp. (.getTimeInMillis ^Calendar param-value))
+                    ^Calendar param-value)
+                  (.setTimestamp prepared-statement param-index ^java.sql.Timestamp param-value))
+    (i/expected (str "a valid SQL param type - either of " sql-single-type-keys) param-type)))
+
+
+(def cached-indices
+  (memoize (fn [^long n]
+             (apply vector-of :int (range n)))))

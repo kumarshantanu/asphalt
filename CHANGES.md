@@ -6,7 +6,7 @@
 * [TODO] Support for more parameter types
 
 
-## 0.5.0 / 2016-December-??
+## 0.5.0 / 2017-January-??
 
 * Have `asphalt.internal.SQLTemplate` implement the `clojure.lang.Named` interface
   * Have `defsql` support named SQL via `SQLTemplate` by accepting `:sql-name` option kwarg
@@ -17,18 +17,24 @@
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
-* Helper macros to create efficient
-  * Row maker: `asphalt.core/letcol` with support for
-    * Column types
-    * Column index/label lookup
-    * Additional arguments for specific result
-  * Params setter in `asphalt.param` namespace: `lay-params`, `lay-params-vec`, `lay-params-map` with support for
-    * Param types - both single-value and multi-value
+* Params setter utility in `asphalt.param` namespace
+  * Macros `lay-params`, `lay-params-vec`, `lay-params-map` with support for
+    * Available at macro-expansion time (efficient)
+    * Param types (single-value and multi-value)
     * Param position/name reference
-    * Additional arguments (as vector) for specific format
+    * Additional coercion arguments
+  * Function `set-params` with run time support for
+    * Available at run time (flexible)
+    * Param types (single-value and multi-value)
+    * Param position/name reference
+    * Additional coercion arguments
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
+  * Efficient row-maker: `asphalt.core/letcol` (macro) with support for
+    * Column types
+    * Column index/label lookup
+    * Additional arguments for specific result
 
 
 ## 0.4.0 / 2015-November-30
