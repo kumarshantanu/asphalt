@@ -20,9 +20,9 @@
 
 (defprotocol ISqlSource
   (get-sql    [this params] "Return SQL string to be executed")
-  (set-params [this ^PreparedStatement prepared-statement params] "Set prepared-statement params")
-  (read-col   [this ^ResultSet result-set column-index] "Read column at specified index (1 based) from result-set")
-  (read-row   [this ^ResultSet result-set column-count] "Read specified number of columns (starting at 1) as a row"))
+  (set-params [this ^PreparedStatement prepared-stmt params] "Set prepared-statement params")
+  (read-col   [this ^ResultSet result-set ^int column-index] "Read column at specified index (1 based) from result-set")
+  (read-row   [this ^ResultSet result-set ^int column-count] "Read specified number of columns (starting at 1) as a row"))
 
 
 (defprotocol ITransactionPropagation
@@ -60,6 +60,61 @@
 
 (def ^:const sql-multi-bit 64)
 (def ^:const sql-type-bits 63)
+
+
+(def base-col-types #{:nil
+                      :boolean
+                      :byte
+                      :byte-array
+                      :date
+                      :double
+                      :float
+                      :integer
+                      :long
+                      :nstring
+                      :object
+                      :string
+                      :time
+                      :timestamp})
+
+
+(def single-typemap {nil         :nil      ; alias for :nil
+                     :nil        :nil
+                     :bool       :boolean  ; alias for :boolean
+                     :boolean    :boolean
+                     :byte       :byte
+                     :byte-array :byte-array
+                     :date       :date
+                     :double     :double
+                     :float      :float
+                     :int        :integer  ; alias for :integer
+                     :integer    :integer
+                     :long       :long
+                     :nstring    :nstring
+                     :object     :object
+                     :string     :string
+                     :time       :time
+                     :timestamp  :timestamp})
+
+
+(def multi-typemap {:bools       :boolean  ; alias for :booleans
+                    :booleans    :boolean
+                    :bytes       :byte
+                    :byte-arrays :byte-array
+                    :dates       :date
+                    :doubles     :double
+                    :floats      :float
+                    :ints        :integer  ; alias for :integers
+                    :integers    :integer
+                    :longs       :long
+                    :nstrings    :nstring
+                    :objects     :object
+                    :strings     :string
+                    :times       :time
+                    :timestamps  :timestamp})
+
+
+(def all-typemap (merge single-typemap multi-typemap))
 
 
 (defrecord StmtCreationEvent [^String sql

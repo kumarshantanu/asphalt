@@ -11,8 +11,10 @@
   (:refer-clojure :exclude [update])
   (:require
     [clojure.string   :as str]
-    [asphalt.type     :as t]
-    [asphalt.internal :as i])
+    [asphalt.core.internal.result :as cir]
+    [asphalt.core.internal.sql    :as cis]
+    [asphalt.type                 :as t]
+    [asphalt.internal             :as i])
   (:import
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement ResultSet ResultSetMetaData]
@@ -138,7 +140,7 @@
   (let [[lhs result-set] binding  ; LHS = Left-Hand-Side in a binding pair, for the lack of a better expression
         result-set-sym (with-meta (gensym "result-set-") {:tag "java.sql.ResultSet"})
         make-bindings  #(mapcat (fn [[sym col-ref]]
-                                  (i/read-column-binding sym result-set-sym col-ref)) %)]
+                                  (cir/read-column-binding sym result-set-sym col-ref)) %)]
     (cond
       (vector? lhs) (do (i/expected #(every? (complement #{:as '&}) %)
                           ":as and & not to be in sequential destructuring" lhs)
@@ -360,6 +362,79 @@
     (when-not (symbol? var-symbol)
       (i/expected "a symbol" var-symbol))
     `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
+
+
+;; Parseable SQL:
+;; "SELECT ^string name, ^int age, ^date joined FROM emp WHERE dept_id=^int $dept-id AND level IN (^ints $levels)"
+;;
+;; SQL template:
+;; [["SELECT name, age, joined FROM emp WHERE dept_id=" [:dept-id :int] " AND level IN (" [:levels :ints] ")"]
+;;  [:string :int :date]]
+
+
+(defn build-sql-source
+  [sql-template result-types
+   {:keys [make-param-setter
+           make-row-maker
+           make-column-reader]
+    :or {make-param-setter  (fn [param-keys param-types]
+                              (eval `(fn [^PreparedStatement prepared-stmt# params#]
+                                       (p/lay-params prepared-stmt# ~param-keys ~param-types params#))))
+         make-row-maker     (fn [result-types]
+                              (i/expected vector? "vector of result types" result-types)
+                              (doseq [t result-types]
+                                (i/expected (partial contains? t/single-typemap)
+                                  (str "valid SQL type - either of " (vec (keys t/single-typemap)))
+                                  t))
+                              (let [rsyms (-> (count result-types)
+                                            (repeatedly gensym)
+                                            vec)
+                                    rlhs  (mapv vector rsyms result-types)]
+                                (eval `(fn [^ResultSet result-set# ^long col-count#]
+                                         (when-not (= col-count# ~(count result-types))
+                                           (i/expected ~(str (count result-types) " columns") col-count#))
+                                         (letcol [~rlhs result-set#]
+                                           ~rsyms)))))
+         make-column-reader (fn [result-types]
+                              (i/expected vector? "vector of result types" result-types)
+                              (doseq [t result-types]
+                                (i/expected (partial contains? t/single-typemap)
+                                  (str "valid SQL type - either of " (vec (keys t/single-typemap)))
+                                  t))
+                              (let [n (count result-types)]
+                                (eval `(fn [^ResultSet result-set# ^long col-index#]
+                                         (when-not (<= 1 col-index# ~n)
+                                           (i/expected ~(str "integer from 1 to " n) col-index#))
+                                         (cir/read-column-value result-set# col-index#)))))}
+    :as options}]
+  (i/expected vector? "vector of SQL template tokens" sql-template)
+  (i/expected vector? "vector of result column types" result-types)
+  (let [sanitized-st (mapv (fn [token]
+                             (cond
+                               (string? token)  token
+                               (keyword? token) [token :nil]
+                               (vector? token)  (let [[param-key param-type] token]
+                                                  (i/expected keyword? "param key (keyword)" param-key)
+                                                  (i/expected (partial contains? t/all-typemap)
+                                                    (str "valid param type - either of " (vec (keys t/all-typemap)))
+                                                    param-type)
+                                                  token)
+                               :otherwise       (i/expected "string, param key or key/type vector" token)))
+                       sql-template)]
+    (let [kt-pairs (filter vector? sanitized-st)]
+      (if (->> kt-pairs
+           (map second)
+           (every? (partial contains? t/single-typemap)))
+       (cis/->StaticSqlTemplate
+         (cis/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
+         (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
+         (make-row-maker result-types)
+         (make-column-reader result-types))
+       (cis/->DynamicSqlTemplate
+         sanitized-st
+         (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
+         (make-row-maker result-types)
+         (make-column-reader result-types))))))
 
 
 ;; ----- convenience functions and macros -----
