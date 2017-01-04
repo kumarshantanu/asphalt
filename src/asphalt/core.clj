@@ -108,42 +108,6 @@
     (DataSourceWrapper. ds i/jdbc-event-factory stmt-creation-listener sql-execution-listener)))
 
 
-;; ----- parse SQL for named parameters and types -----
-
-
-(defn parse-sql
-  "Given a SQL statement with embedded parameter names return a three-element vector:
-  [SQL-template-string
-   param-pairs           (each pair is a two-element vector of param key and type)
-   result-column-types]
-  that can be used later to extract param values from maps."
-  ([^String sql]
-    (parse-sql sql {}))
-  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
-                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
-                 :as options}]
-    (let [[sql named-params return-col-types]  (i/parse-sql-str sql escape-char param-start-char type-start-char)]
-      (i/make-sql-template
-        sql-name
-        sql
-        (mapv #(let [[p-name p-type] %]
-                 [(i/encode-name p-name) (i/encode-type p-type sql)])
-          named-params)
-        (mapv #(i/encode-type % sql) return-col-types)))))
-
-
-(defmacro defsql
-  "Define a parsed SQL template that can be used to execute it later."
-  ([var-symbol sql]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
-    `(defsql ~var-symbol ~sql {}))
-  ([var-symbol sql options]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
-    `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
-
-
 ;; ----- java.sql.ResultSet operations -----
 
 
@@ -360,6 +324,42 @@
           (params-setter sql-source pstmt params)
           (.addBatch pstmt))
         (vec (.executeBatch pstmt))))))
+
+
+;; ----- parse SQL for named parameters and types -----
+
+
+(defn parse-sql
+  "Given a SQL statement with embedded parameter names return a three-element vector:
+  [SQL-template-string
+   param-pairs           (each pair is a two-element vector of param key and type)
+   result-column-types]
+  that can be used later to extract param values from maps."
+  ([^String sql]
+    (parse-sql sql {}))
+  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
+                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
+                 :as options}]
+    (let [[sql named-params return-col-types]  (i/parse-sql-str sql escape-char param-start-char type-start-char)]
+      (i/make-sql-template
+        sql-name
+        sql
+        (mapv #(let [[p-name p-type] %]
+                 [(i/encode-name p-name) (i/encode-type p-type sql)])
+          named-params)
+        (mapv #(i/encode-type % sql) return-col-types)))))
+
+
+(defmacro defsql
+  "Define a parsed SQL template that can be used to execute it later."
+  ([var-symbol sql]
+    (when-not (symbol? var-symbol)
+      (i/expected "a symbol" var-symbol))
+    `(defsql ~var-symbol ~sql {}))
+  ([var-symbol sql options]
+    (when-not (symbol? var-symbol)
+      (i/expected "a symbol" var-symbol))
+    `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
 
 
 ;; ----- convenience functions and macros -----
