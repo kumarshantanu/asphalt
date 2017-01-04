@@ -385,9 +385,7 @@
                                 (do
                                   (i/expected vector? "vector of result types" result-types)
                                   (doseq [t result-types]
-                                    (i/expected (partial contains? t/single-typemap)
-                                      (str "valid SQL type - either of " (vec (keys t/single-typemap)))
-                                      t))
+                                    (i/expected-result-type t))
                                   (let [rsyms (-> (count result-types)
                                                 (repeatedly gensym)
                                                 vec)
@@ -416,9 +414,7 @@
                                (keyword? token) [token :nil]
                                (vector? token)  (let [[param-key param-type] token]
                                                   (i/expected keyword? "param key (keyword)" param-key)
-                                                  (i/expected (partial contains? t/all-typemap)
-                                                    (str "valid param type - either of " (vec (keys t/all-typemap)))
-                                                    param-type)
+                                                  (i/expected-param-type param-type)
                                                   token)
                                :otherwise       (i/expected "string, param key or key/type vector" token)))
                        sql-template)]

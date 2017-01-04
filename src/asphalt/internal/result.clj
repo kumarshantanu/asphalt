@@ -98,7 +98,7 @@
                   (string? col-arg)  `(.getTimestamp ~result-set-sym ~col-ref (tz-cal ~col-arg))
                   (i/named? col-arg) `(.getTimestamp ~result-set-sym ~col-ref (tz-cal ~(i/as-str col-arg)))
                   :otherwise         `(.getTimestamp ~result-set-sym ~col-ref ~col-arg))
-    (i/expected (str "valid SQL type - either of " (vec (keys t/single-typemap))) column-type)))
+    (i/expected-result-type column-type)))
 
 
 (defn read-column-binding
@@ -124,5 +124,5 @@
          :string     [assoc  :tag "java.lang.String"]
          :time       [assoc  :tag "java.sql.Time"]
          :timestamp  [assoc  :tag "java.sql.Timestamp"]
-         (i/expected (str "valid SQL type - either of " (vec (keys t/single-typemap))) column-type)))
+         (i/expected-result-type column-type)))
      (read-column-expr column-type result-set-sym column-index-or-label col-arg)]))

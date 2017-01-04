@@ -105,6 +105,22 @@
 ;; ----- type definitions -----
 
 
+(defn expected-result-type
+  ([suffix found]
+    (expected #(contains? t/single-typemap %)
+      (str "valid SQL result type - either of " (vec (keys t/single-typemap)) suffix) found))
+  ([found]
+    (expected-result-type "" found)))
+
+
+(defn expected-param-type
+  ([suffix found]
+    (expected #(contains? t/all-typemap %)
+      (str "valid SQL param type - either of " (vec (keys t/all-typemap)) suffix) found))
+  ([found]
+    (expected-param-type "" found)))
+
+
 (def sql-type-map {nil         t/sql-nil
                    :bool       t/sql-bool
                    :boolean    t/sql-boolean

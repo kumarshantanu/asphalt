@@ -22,12 +22,20 @@
 (def encode-name keyword)
 
 
-;(defn encode-type
-;  [^String token ^String sql]
-;  (let [k (keyword token)]
-;    (when-not (contains? sql-type-map k)
-;      (i/expected (str supported-sql-types " in SQL string: " sql) token))
-;    (get sql-type-map k)))
+(defn encode-result-type
+  [^String token ^String sql]
+  (let [k (keyword token)]
+    (when-not (contains? t/single-typemap k)
+      (i/expected-result-type (str " in SQL string: " sql) token))
+    (get t/single-typemap k)))
+
+
+(defn encode-param-type
+  [^String token ^String sql]
+  (let [k (keyword token)]
+    (when-not (contains? t/all-typemap k)
+      (i/expected-param-type (str " in SQL string: " sql) token))
+    (get t/all-typemap k)))
 
 
 (defn valid-name-char?
