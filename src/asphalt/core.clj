@@ -428,7 +428,13 @@
          (make-row-maker result-types)
          (make-column-reader result-types))
        (isql/->DynamicSqlTemplate
-         sanitized-st
+         (reduce (fn [st token] (cond
+                                  (and (string? token) (string? (last st))) (conj (pop st) (str (last st) token))
+                                  (and (vector? token) (string? (last st))
+                                    (contains? t/single-typemap (second     ; pre-convert single value params to '?'
+                                                                  token)))  (conj (pop st) (str (last st) \?))
+                                  :otherwise                                (conj st token)))
+           [] sanitized-st)
          (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types))))))
