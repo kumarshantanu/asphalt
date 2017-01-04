@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 
-(ns asphalt.core.internal.result
+(ns asphalt.internal.result
   (:require
     [asphalt.internal :as i]
     [asphalt.type     :as t])

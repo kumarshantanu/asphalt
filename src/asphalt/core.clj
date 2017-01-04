@@ -11,10 +11,10 @@
   (:refer-clojure :exclude [update])
   (:require
     [clojure.string   :as str]
-    [asphalt.core.internal.result :as cir]
-    [asphalt.core.internal.sql    :as cis]
-    [asphalt.type                 :as t]
-    [asphalt.internal             :as i])
+    [asphalt.internal.result :as iresult]
+    [asphalt.internal.sql    :as isql]
+    [asphalt.type            :as t]
+    [asphalt.internal        :as i])
   (:import
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement ResultSet ResultSetMetaData]
@@ -140,7 +140,7 @@
   (let [[lhs result-set] binding  ; LHS = Left-Hand-Side in a binding pair, for the lack of a better expression
         result-set-sym (with-meta (gensym "result-set-") {:tag "java.sql.ResultSet"})
         make-bindings  #(mapcat (fn [[sym col-ref]]
-                                  (cir/read-column-binding sym result-set-sym col-ref)) %)]
+                                  (iresult/read-column-binding sym result-set-sym col-ref)) %)]
     (cond
       (vector? lhs) (do (i/expected #(every? (complement #{:as '&}) %)
                           ":as and & not to be in sequential destructuring" lhs)
@@ -397,7 +397,7 @@
                                                (i/expected ~(str (count result-types) " columns") col-count#))
                                              (letcol [~rlhs result-set#]
                                                ~rsyms)))))
-                                cir/read-columns))
+                                iresult/read-columns))
          make-column-reader (fn [result-types]
                               (let [n ^long (if (seq result-types)
                                               (count result-types)
@@ -406,7 +406,7 @@
                                 (fn [^ResultSet result-set ^long col-index]
                                   (when-not (<= 1 col-index n)
                                     (i/expected s col-index))
-                                  (cir/read-column-value result-set col-index))))}
+                                  (iresult/read-column-value result-set col-index))))}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-template)
   (i/expected vector? "vector of result column types" result-types)
@@ -426,12 +426,12 @@
       (if (->> kt-pairs
            (map second)
            (every? (partial contains? t/single-typemap)))
-       (cis/->StaticSqlTemplate
-         (cis/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
+       (isql/->StaticSqlTemplate
+         (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
          (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types))
-       (cis/->DynamicSqlTemplate
+       (isql/->DynamicSqlTemplate
          sanitized-st
          (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
