@@ -60,10 +60,7 @@
         params-sym  (gensym "sql-params-")
         param-count (count param-types)
         indices-sym (gensym "param-indices-")
-        indices-exp (pi/params-indices param-keys param-types params-sym)
-        idx-binding (if (vector? indices-exp)
-                      []
-                      [indices-sym indices-exp])]
+        indices-exp (pi/params-indices param-keys param-types params-sym)]
     `(let [~params-sym ~params
            ~@(when-not (vector? indices-exp)  ; indices-exp is a vector for single params, S-expr otherwise
                [indices-sym indices-exp])]
