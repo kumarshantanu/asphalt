@@ -44,8 +44,9 @@
 
 
 (defmacro lay-params*
-  "Implementation detail of `lay-params`.
-  See: `lay-params`"
+  "Implementation detail of asphalt.param/lay-params.
+  See:
+    asphalt.param/lay-params"
   [prepared-stmt param-keys param-types params]
   (i/expected vector? "vector of SQL param keys" param-keys)
   (i/expected vector? "vector of SQL param types" param-types)
@@ -66,9 +67,12 @@
                [indices-sym indices-exp])]
        (if (<= ~param-count (count ~params-sym))
          (let [~prepared-stmt-sym ~prepared-stmt]
-           (doseq [each-key# ~param-keys]
-             (when-not (contains? ~params-sym each-key#)
-               (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym)))
+           ~(if (= param-keys (vec (range (count param-keys))))  ; is it vector params?
+              `(when (< (count ~params-sym) ~(count param-keys)) ; short circuit for vector params
+                 (i/expected (str ~(count param-keys) " or more params") ~params-sym))
+              `(doseq [each-key# ~param-keys]
+                 (when-not (contains? ~params-sym each-key#)
+                   (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym))))
            ~@(->> (map vector param-types param-keys)
                (map-indexed (fn [^long idx [t k]]
                               (pi/lay-param-expr prepared-stmt-sym t
