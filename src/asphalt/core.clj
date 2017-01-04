@@ -381,31 +381,32 @@
                               (eval `(fn [^PreparedStatement prepared-stmt# params#]
                                        (p/lay-params prepared-stmt# ~param-keys ~param-types params#))))
          make-row-maker     (fn [result-types]
-                              (i/expected vector? "vector of result types" result-types)
-                              (doseq [t result-types]
-                                (i/expected (partial contains? t/single-typemap)
-                                  (str "valid SQL type - either of " (vec (keys t/single-typemap)))
-                                  t))
-                              (let [rsyms (-> (count result-types)
-                                            (repeatedly gensym)
-                                            vec)
-                                    rlhs  (mapv vector rsyms result-types)]
-                                (eval `(fn [^ResultSet result-set# ^long col-count#]
-                                         (when-not (= col-count# ~(count result-types))
-                                           (i/expected ~(str (count result-types) " columns") col-count#))
-                                         (letcol [~rlhs result-set#]
-                                           ~rsyms)))))
+                              (if (seq result-types)
+                                (do
+                                  (i/expected vector? "vector of result types" result-types)
+                                  (doseq [t result-types]
+                                    (i/expected (partial contains? t/single-typemap)
+                                      (str "valid SQL type - either of " (vec (keys t/single-typemap)))
+                                      t))
+                                  (let [rsyms (-> (count result-types)
+                                                (repeatedly gensym)
+                                                vec)
+                                        rlhs  (mapv vector rsyms result-types)]
+                                    (eval `(fn [^ResultSet result-set# ^long col-count#]
+                                             (when-not (= col-count# ~(count result-types))
+                                               (i/expected ~(str (count result-types) " columns") col-count#))
+                                             (letcol [~rlhs result-set#]
+                                               ~rsyms)))))
+                                cir/read-columns))
          make-column-reader (fn [result-types]
-                              (i/expected vector? "vector of result types" result-types)
-                              (doseq [t result-types]
-                                (i/expected (partial contains? t/single-typemap)
-                                  (str "valid SQL type - either of " (vec (keys t/single-typemap)))
-                                  t))
-                              (let [n (count result-types)]
-                                (eval `(fn [^ResultSet result-set# ^long col-index#]
-                                         (when-not (<= 1 col-index# ~n)
-                                           (i/expected ~(str "integer from 1 to " n) col-index#))
-                                         (cir/read-column-value result-set# col-index#)))))}
+                              (let [n ^long (if (seq result-types)
+                                              (count result-types)
+                                              Integer/MAX_VALUE)
+                                    s (str "integer from 1 to " n)]
+                                (fn [^ResultSet result-set ^long col-index]
+                                  (when-not (<= 1 col-index n)
+                                    (i/expected s col-index))
+                                  (cir/read-column-value result-set col-index))))}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-template)
   (i/expected vector? "vector of result column types" result-types)
