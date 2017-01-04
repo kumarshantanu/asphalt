@@ -20,35 +20,60 @@
 
 
 (defn read-column-value
-  [^ResultSet result-set ^long column-index]
-  (let [data (.getObject result-set column-index)]
-    (cond
-      (instance? Clob data) (.getString result-set column-index)
-      (instance? Blob data) (.getBytes  result-set column-index)
-      (nil? data)           nil
-      :otherwise            (let [^String class-name (.getName ^Class (class data))
-                                  ^ResultSetMetaData rsmd (.getMetaData result-set)
-                                  ^String mdcn (.getColumnClassName rsmd column-index)]
-                              (cond
-                                (.startsWith class-name
-                                  "oracle.sql.DATE")                (if (#{"java.sql.Timestamp"
-                                                                           "oracle.sql.TIMESTAMP"} mdcn)
-                                                                      (.getTimestamp result-set column-index)
-                                                                      (.getDate      result-set column-index))
-                                (and (instance? java.sql.Date data)
-                                  (= "java.sql.Timestamp" mdcn))    (.getTimestamp result-set column-index)
-                                :otherwise                          data)))))
+  ([^ResultSet result-set ^long column-index]
+    (let [data (.getObject result-set column-index)]
+      (cond
+        (instance? Clob data) (.getString result-set column-index)
+        (instance? Blob data) (.getBytes  result-set column-index)
+        (nil? data)           nil
+        :otherwise            (let [^String class-name (.getName ^Class (class data))
+                                    ^ResultSetMetaData rsmd (.getMetaData result-set)
+                                    ^String mdcn (.getColumnClassName rsmd column-index)]
+                                (cond
+                                  (.startsWith class-name
+                                    "oracle.sql.DATE")                (if (#{"java.sql.Timestamp"
+                                                                             "oracle.sql.TIMESTAMP"} mdcn)
+                                                                        (.getTimestamp result-set column-index)
+                                                                        (.getDate      result-set column-index))
+                                  (and (instance? java.sql.Date data)
+                                    (= "java.sql.Timestamp" mdcn))    (.getTimestamp result-set column-index)
+                                  :otherwise                          data)))))
+  ([column-type ^ResultSet result-set ^long column-index]
+    (case (get t/single-typemap column-type)
+      :nil        (read-column-value result-set column-index)
+      :boolean    (.getBoolean   result-set column-index)
+      :byte       (.getByte      result-set column-index)
+      :byte-array (.getBytes     result-set column-index)
+      :date       (.getDate      result-set column-index)
+      :double     (.getDouble    result-set column-index)
+      :float      (.getFloat     result-set column-index)
+      :integer    (.getInt       result-set column-index)
+      :long       (.getLong      result-set column-index)
+      :nstring    (.getNString   result-set column-index)
+      :object     (.getObject    result-set column-index)
+      :string     (.getString    result-set column-index)
+      :time       (.getTime      result-set column-index)
+      :timestamp  (.getTimestamp result-set column-index)
+      (i/expected-result-type column-type))))
 
 
 (defn read-columns
-  [^ResultSet result-set ^long column-count]
-  (let [^objects row (object-array column-count)]
-    (loop [i (int 0)]
-      (when (< i column-count)
-        (let [j (unchecked-inc i)]
-          (aset row i (read-column-value result-set j))
-          (recur j))))
-    (vec row)))
+  ([^ResultSet result-set ^long column-count]
+    (let [^objects row (object-array column-count)]
+      (loop [i (int 0)]
+        (when (< i column-count)
+          (let [j (unchecked-inc i)]
+            (aset row i (read-column-value result-set j))
+            (recur j))))
+      (vec row)))
+  ([column-types ^ResultSet result-set ^long column-count]
+    (let [^objects row (object-array column-count)]
+      (loop [i (int 0)]
+        (when (< i column-count)
+          (let [j (unchecked-inc i)]
+            (aset row i (read-column-value (get column-types i) result-set j))
+            (recur j))))
+      (vec row))))
 
 
 ;; ----- read ResultSet columns with type information -----
