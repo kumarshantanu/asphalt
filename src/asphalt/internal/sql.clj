@@ -23,7 +23,7 @@
 
 
 (defn encode-result-type
-  [^String token ^String sql]
+  [^String sql ^String token]
   (let [k (keyword token)]
     (when-not (contains? t/single-typemap k)
       (i/expected-result-type (str " in SQL string: " sql) token))
@@ -31,11 +31,13 @@
 
 
 (defn encode-param-type
-  [^String token ^String sql]
+  [^String sql ^String token]
   (let [k (keyword token)]
     (when-not (contains? t/all-typemap k)
       (i/expected-param-type (str " in SQL string: " sql) token))
-    (get t/all-typemap k)))
+    (if (contains? t/multi-typemap k)
+      k
+      (get t/all-typemap k))))
 
 
 (defn valid-name-char?
@@ -127,12 +129,13 @@
   "Parse SQL string using escape char, named-param char and type-hint char, returning [sql named-params return-col-types]"
   [^String sql ec mc tc]
   (let [^char ec ec ^char mc mc ^char tc tc nn (count sql)
+        st (transient [])  ; SQL template (alternating tokens of SQL-string and param-name/type vectors)
         ^StringBuilder sb (StringBuilder. nn)
-        ks (transient [])  ; param keys
         ts (transient [])  ; result column types
         handle-named! (fn [^StringBuilder buff ^StringBuilder param-type]
-                        (.append sb \?)
-                        (conj! ks [(.toString buff) (when param-type (.toString param-type))]))
+                        (conj! st (.toString sb))
+                        (.setLength sb 0)
+                        (conj! st [(.toString buff) (when param-type (.toString param-type))]))
         handle-typed! (fn [^StringBuilder buff] (conj! ts (.toString buff)))
         special-chars #{ec mc tc \" \'}]
     (loop [i 0 ; current index
@@ -164,7 +167,12 @@
                                 \- (encounter-sql-comment sb      {:c? true})
                                 nil))))))))]
           (recur (unchecked-inc i) ps))))
-    [(.toString sb) (persistent! ks) (persistent! ts)]))
+    (when (pos? (.length sb))
+      (conj! st (.toString sb)))
+    [(persistent! st) (persistent! ts)]))
+
+
+;; ----- SQL generation -----
 
 
 (def cached-qmarks
@@ -176,7 +184,7 @@
   ^String
   [sql-template params]
   (let [^StringBuilder sb (StringBuilder.)]
-    (i/loop-indexed [i 0
+    (i/each-indexed [i 0
                      token sql-template]
       (if (string? token)
         (.append sb ^String token)
@@ -184,14 +192,19 @@
           (if (contains? t/multi-typemap param-type)
             (let [k (if (vector? params) i param-key)]
               (if (contains? params k)
-               (.append sb ^String (cached-qmarks (count (get params k))))
-               (i/illegal-arg "No value found for key:" k "in" (pr-str params))))
+                (.append sb ^String (cached-qmarks (count (get params k))))
+                (i/illegal-arg "No value found for key:" k "in" (pr-str params))))
             (.append sb \?)))))
     (.toString sb)))
 
 
+;; ----- SQL templates -----
+
+
 (defrecord StaticSqlTemplate
-  [^String sql param-setter row-maker column-reader]
+  [^String sql-name ^String sql param-setter row-maker column-reader]
+  clojure.lang.Named
+  (getName [_] sql-name)
   t/ISqlSource
   (get-sql    [this params] sql)
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
@@ -200,7 +213,9 @@
 
 
 (defrecord DynamicSqlTemplate
-  [sql-template param-setter row-maker column-reader]
+  [^String sql-name sql-template param-setter row-maker column-reader]
+  clojure.lang.Named
+  (getName [_] sql-name)
   t/ISqlSource
   (get-sql    [this params] (make-sql sql-template params))
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))

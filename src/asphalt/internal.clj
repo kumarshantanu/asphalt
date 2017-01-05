@@ -63,6 +63,15 @@
 
 
 (defmacro loop-indexed
+  "Given a binding vector of a counter and one or more sequence-iteratees, run the loop as long as all the sequences
+  have elements.
+  Example: (loop-indexed [i 0
+                          j [10 20 30]
+                          k [:foo :bar :baz :qux]]
+             (println i j k))
+  Output: 0 (10 20 30) (:foo :bar :baz)
+          1 (20 30) (:bar :baz)
+          2 (30) (:baz)"
   [[counter init-count iteratee coll & more-pairs] & body]
   (assert-symbols counter iteratee)
   (->> (partition 2 more-pairs)
@@ -73,13 +82,44 @@
   (let [more-syms (->> (partition 2 more-pairs)
                     (map first))
         more-seq  (map  (fn [x] `(seq ~x)) more-syms)
-        more-rest (map  (fn [x] `(rest ~x)) more-syms)]
+        more-next (map  (fn [x] `(next ~x)) more-syms)]
     `(loop [~counter ~init-count
-            ~iteratee ~coll
-            ~@more-pairs]
-      (when (and (seq ~iteratee) ~@more-seq)
+            ~iteratee (seq ~coll)
+            ~@(->> more-pairs
+                (partition 2)
+                (mapcat (fn [[i c]] [i (list seq c)])))]
+      (when (and ~iteratee ~@more-syms)
         (do ~@body)
-        (recur (unchecked-inc ~counter) (rest ~iteratee) ~@more-rest)))))
+        (recur (unchecked-inc ~counter) (next ~iteratee) ~@more-next)))))
+
+
+(defmacro each-indexed
+  "Given a binding vector of a counter and one or more sequence locals, run the loop as long as all the sequences
+  have elements.
+  Example: (each-indexed [i 0
+                          j [10 20 30]
+                          k [:foo :bar :baz :qux]]
+             (println i j k))
+  Output: 0 10 :foo
+          1 20 :bar
+          2 30 :baz"
+  [[counter init-count each coll & more-pairs] & body]
+  (assert-symbols counter each)
+  (->> (partition 2 more-pairs)
+    (map first)
+    (apply assert-symbols))
+  (when (odd? (count more-pairs))
+    (expected "an even number of forms in binding vector" more-pairs))
+  (let [[iter & more-iters] (repeatedly (inc (/ (count more-pairs) 2)) gensym)
+        partition-pairs (partition 2 more-pairs)
+        iter-pairs (interleave more-iters (map second partition-pairs))
+        each-pairs (->> more-iters
+                     (map (partial list first))
+                     (interleave (map first partition-pairs)))]
+    `(loop-indexed [~counter ~init-count ~iter ~coll ~@iter-pairs]
+       (let [~each (first ~iter)
+             ~@each-pairs]
+         ~@body))))
 
 
 (defn named?
@@ -105,20 +145,28 @@
 ;; ----- type definitions -----
 
 
-(defn expected-result-type
-  ([suffix found]
-    (expected #(contains? t/single-typemap %)
-      (str "valid SQL result type - either of " (vec (keys t/single-typemap)) suffix) found))
-  ([found]
-    (expected-result-type "" found)))
+(let [msg (str "valid SQL result type - either of " (vec (keys t/single-typemap)))]
+  (defn expected-result-type
+    ([suffix found]
+      (expected (str msg suffix) found))
+    ([found]
+      (expected msg found))))
 
 
-(defn expected-param-type
-  ([suffix found]
-    (expected #(contains? t/all-typemap %)
-      (str "valid SQL param type - either of " (vec (keys t/all-typemap)) suffix) found))
-  ([found]
-    (expected-param-type "" found)))
+(let [msg (str "valid SQL single-value param type - either of " (vec (keys t/single-typemap)))]
+  (defn expected-single-param-type
+    ([suffix found]
+      (expected (str msg suffix) found))
+    ([found]
+      (expected msg found))))
+
+
+(let [msg (str "valid SQL param type - either of " (vec (keys t/all-typemap)))]
+  (defn expected-param-type
+    ([suffix found]
+      (expected (str msg suffix) found))
+    ([found]
+      (expected msg found))))
 
 
 (def sql-type-map {nil         t/sql-nil

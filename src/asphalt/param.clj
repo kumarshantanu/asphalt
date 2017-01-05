@@ -9,8 +9,9 @@
 
 (ns asphalt.param
   (:require
-    [asphalt.internal :as i]
-    [asphalt.param.internal :as pi])
+    [asphalt.internal       :as i]
+    [asphalt.param.internal :as pi]
+    [asphalt.type           :as t])
   (:import
     [java.util Calendar TimeZone]
     [java.sql Date PreparedStatement Time Timestamp]))
@@ -51,8 +52,7 @@
   (i/expected vector? "vector of SQL param keys" param-keys)
   (i/expected vector? "vector of SQL param types" param-types)
   (doseq [each-type param-types]
-    (i/expected (partial contains? pi/sql-all-types-map)
-      (str "a valid SQL param type - either of " pi/sql-all-types-keys) each-type))
+    (when-not (contains? t/all-typemap each-type) (i/expected-param-type each-type)))
   (when (not= (count param-types) (count param-keys))
     (i/expected (format "param-types (%d) and param-keys (%d) to be of the same length"
                   (count param-types) (count param-keys)) {:param-types param-types
@@ -122,13 +122,11 @@
     asphalt.param/default-param-types
     asphalt.param/param-keys"
   ([^PreparedStatement prepared-stmt params]
-    (set-params
-      prepared-stmt (param-keys params) default-param-types params))
+    (set-params prepared-stmt (param-keys params) default-param-types params))
   ([^PreparedStatement prepared-stmt param-key-type-pairs params]
     (let [[param-keys param-types] (let [pairs (partition 2 param-key-type-pairs)]
                                      [(mapv first pairs) (mapv second pairs)])]
-      (set-params
-        prepared-stmt param-keys param-types params)))
+      (set-params prepared-stmt param-keys param-types params)))
   ([^PreparedStatement prepared-stmt param-keys param-types params]
     (loop [pi 1  ; param index
            ks (seq param-keys)
@@ -138,7 +136,7 @@
           (if (contains? params k)
             (let [t (first ts)
                   v (get params k)]
-              (if-let [single-type (get pi/sql-multi-single-map t)]  ; multi-value param?
+              (if-let [single-type (get t/multi-typemap t)]  ; multi-value param?
                 (let [k (count v)]  ; iterate over all values of multi-value param
                   (loop [i 0]
                     (when (< i k)
