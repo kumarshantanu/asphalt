@@ -376,7 +376,8 @@
   [sql-template result-types
    {:keys [make-param-setter
            make-row-maker
-           make-column-reader]
+           make-column-reader
+           sql-name]
     :or {make-param-setter  (fn [param-keys param-types]
                               (eval `(fn [^PreparedStatement prepared-stmt# params#]
                                        (p/lay-params prepared-stmt# ~param-keys ~param-types params#))))
@@ -385,7 +386,7 @@
                                 (do
                                   (i/expected vector? "vector of result types" result-types)
                                   (doseq [t result-types]
-                                    (i/expected-result-type t))
+                                    (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
                                   (let [rsyms (-> (count result-types)
                                                 (repeatedly gensym)
                                                 vec)
@@ -404,7 +405,8 @@
                                 (fn [^ResultSet result-set ^long col-index]
                                   (when-not (<= 1 col-index n)
                                     (i/expected s col-index))
-                                  (iresult/read-column-value result-set col-index))))}
+                                  (iresult/read-column-value result-set col-index))))
+         sql-name           (gensym "sql-name-")}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-template)
   (i/expected vector? "vector of result column types" result-types)
@@ -414,7 +416,8 @@
                                (keyword? token) [token :nil]
                                (vector? token)  (let [[param-key param-type] token]
                                                   (i/expected keyword? "param key (keyword)" param-key)
-                                                  (i/expected-param-type param-type)
+                                                  (when-not (contains? t/all-typemap param-type)
+                                                    (i/expected-param-type param-type))
                                                   token)
                                :otherwise       (i/expected "string, param key or key/type vector" token)))
                        sql-template)]
@@ -423,11 +426,13 @@
            (map second)
            (every? (partial contains? t/single-typemap)))
        (isql/->StaticSqlTemplate
+         sql-name
          (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
          (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types))
        (isql/->DynamicSqlTemplate
+         sql-name
          (reduce (fn [st token] (cond
                                   (and (string? token) (string? (last st))) (conj (pop st) (str (last st) token))
                                   (and (vector? token) (string? (last st))
