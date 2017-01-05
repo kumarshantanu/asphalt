@@ -110,7 +110,7 @@
     (apply assert-symbols))
   (when (odd? (count more-pairs))
     (expected "an even number of forms in binding vector" more-pairs))
-  (let [[iter & more-iters] (repeatedly (inc (/ (count more-pairs) 2)) gensym)
+  (let [[iter & more-iters] (repeatedly (inc (quot (count more-pairs) 2)) gensym)
         partition-pairs (partition 2 more-pairs)
         iter-pairs (interleave more-iters (map second partition-pairs))
         each-pairs (->> more-iters
