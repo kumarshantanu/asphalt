@@ -16,7 +16,8 @@
   * [TODO] Deprecate `defquery`
 * [TODO] Remove deprecated `asphalt.core/instrument-datasource`
 * [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
-* [TODO] Do not swallow exception that caused rollback attempt in a transaction.
+* Transactions
+  * Do not override the exception causing rollback/commit by the exception in rollback/commit
 * Types/Protocols
   * [BREAKING CHANGE] Now `asphalt.type.ISqlSource/get-sql` accepts params as argument (for dynamic SQL)
   * [BREAKING CHANGE] Drop support for map SQL templates

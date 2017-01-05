@@ -175,9 +175,10 @@
             (t/rollback-txn propagation (:connection txn-connection-source) txn-context))
           result)
         (catch Throwable error
-          (if (failure-error? error)
-            (t/rollback-txn propagation (:connection txn-connection-source) txn-context)
-            (t/commit-txn   propagation (:connection txn-connection-source) txn-context))
+          (try (if (failure-error? error)
+                 (t/rollback-txn propagation (:connection txn-connection-source) txn-context)
+                 (t/commit-txn   propagation (:connection txn-connection-source) txn-context))
+            (catch Exception swallow-nested-error))
           (throw error))))
     (merge options
       (if isolation
