@@ -19,6 +19,7 @@
 * [TODO] Do not swallow exception that caused rollback attempt in a transaction.
 * Types/Protocols
   * [BREAKING CHANGE] Now `asphalt.type.ISqlSource/get-sql` accepts params as argument (for dynamic SQL)
+  * [BREAKING CHANGE] Drop support for map SQL templates
 * Params setter utility in `asphalt.param` namespace
   * Macro `lay-params` (available at macro-expansion time, efficient)
   * Function `set-params` (available at run time, flexible)

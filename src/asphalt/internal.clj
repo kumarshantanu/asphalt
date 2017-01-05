@@ -656,31 +656,6 @@
       (if (pos? (alength types))
         (read-columns result-set column-count types)
         (read-columns result-set column-count))))
-  ;;===========
-  java.util.Map
-  ;;===========
-  (get-sql    [m params] (:sql m))
-  (set-params [m ^PreparedStatement prepared-statement params]
-    (cond
-      (map? params)    (if-let [param-keys (:param-keys m)]
-                         (let [param-types (or (:param-types m) (no-param-type-vec (count param-keys)))]
-                           (set-params-map! prepared-statement param-keys param-types params))
-                         (expected "key :param-keys to be present" m))
-      (vector? params) (if-let [param-types (or (:param-types m) (when-let [param-keys (:param-keys m)]
-                                                                   (no-param-type-vec (count param-keys))))]
-                         (set-params-vec! prepared-statement param-types params)
-                         (set-params-vec! prepared-statement params))
-      (nil? params)    nil
-      :otherwise       (expected "map, vector or nil" params)))
-  (read-col   [m ^ResultSet result-set ^long column-index]
-    (if-let [types (:result-types m)]
-      (let [column-type (get types (unchecked-dec column-index))]
-        (read-column-value result-set column-index column-type))
-      (read-column-value result-set column-index)))
-  (read-row   [m ^ResultSet result-set ^long column-count]
-    (if-let [types (:result-types m)]
-      (read-columns result-set column-count types)
-      (read-columns result-set column-count)))
   ;;====
   String
   ;;====

@@ -28,71 +28,43 @@
 ;join_date DATE NOT NULL"
 
 
-(defn transaction-commit-helper
-  [{:keys [target-sql-count
-           target-sql-insert
-           target-sql-select
-           target-sql-selfew
-           target-sql-update
-           target-sql-delete]}]
+(deftest test-transaction-commit
   (let [jd1 (u/make-date)
         vs1 ["Joe Coder" 100000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
         vs2 ["Harry Hacker" 90000 "R&D" jd1]]
     ;; insert one record
-    (a/genkey u/ds target-sql-insert vs1)
+    (a/genkey u/ds ct/t-insert vs1)
     ;; transaction that commits
     (x/with-transaction [txn u/ds] {:isolation :read-committed}
-      (a/update txn target-sql-update upa)
-      (a/genkey txn target-sql-insert vs2))
+      (a/update txn ct/t-update upa)
+      (a/genkey txn ct/t-insert vs2))
     ;; verify result
     (is (= 2 (a/query a/fetch-single-value
-               u/ds target-sql-count [])) "Verify that rows were inserted")))
+               u/ds ct/t-count [])) "Verify that rows were inserted")))
 
 
-(deftest test-transaction-commit-template
-  (transaction-commit-helper ct/t-all))
-
-
-(deftest test-transaction-commit-map
-  (transaction-commit-helper ct/m-all))
-
-
-(defn transaction-rollback-helper
-  [{:keys [target-sql-count
-           target-sql-insert
-           target-sql-select
-           target-sql-selfew
-           target-sql-update
-           target-sql-delete]}]
+(deftest test-transaction-rollback
   (let [jd1 (u/make-date)
         vs1 ["Joe Coder" 100000 "Accounts" jd1]
         upa {:new-salary 110000
              :dept "Accounts"}
         vs2 ["Harry Hacker" 90000 "R&D" jd1]]
     ;; insert one record
-    (a/genkey u/ds target-sql-insert vs1)
+    (a/genkey u/ds ct/t-insert vs1)
     ;; transaction that commits
     (is (thrown? IllegalStateException
           (x/with-transaction [txn u/ds] {:isolation :read-committed}
-            (a/update txn target-sql-update upa)
+            (a/update txn ct/t-update upa)
             (throw (IllegalStateException. "boom!"))
-            (a/genkey txn target-sql-insert vs2))))
+            (a/genkey txn ct/t-insert vs2))))
     ;; verify result
     (is (= 1 (a/query a/fetch-single-value
-               u/ds target-sql-count [])) "Second row should not be inserted")
+               u/ds ct/t-count [])) "Second row should not be inserted")
     (is (= vs1
           (vec (a/query a/fetch-single-row
-                 u/ds target-sql-select []))) "Only original values should exist")))
-
-
-(deftest test-transaction-rollback-template
-  (transaction-rollback-helper ct/t-all))
-
-
-(deftest test-transaction-rollback-map
-  (transaction-rollback-helper ct/m-all))
+                 u/ds ct/t-select []))) "Only original values should exist")))
 
 
 ;; ----- propagation tests -----
