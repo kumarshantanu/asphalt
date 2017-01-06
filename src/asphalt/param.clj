@@ -154,3 +154,12 @@
                   (iparam/set-param-value prepared-stmt t pi v)
                   (recur (unchecked-inc pi) (next ks) (next ts)))))
             (i/illegal-arg "No value found for key:" k "in" (pr-str params))))))))
+
+
+(defn set-params-with-query-timeout
+  "Return a params setter fn usable with asphalt.core/query, that times out on query execution and throws a
+  java.sql.SQLTimeoutException instance. Supported by JDBC 4.0 (and higher) drivers only."
+  [^long n-seconds]
+  (fn [sql-source ^PreparedStatement pstmt params]
+    (.setQueryTimeout pstmt n-seconds)
+    (t/set-params sql-source pstmt params)))

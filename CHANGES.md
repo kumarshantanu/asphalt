@@ -34,6 +34,7 @@
   * Support for param position/name reference (vector/map/nil params)
   * Support for additional coercion arguments
   * Functions to convert date/time/timestamp to `java.util.Calendar` with timezone
+  * [BREAKING CHANGE] Function `set-params-with-query-timeout` moved from `asphalt.core`
 * Result-columns reading utility in `asphalt.result` namespace
   * Efficient row-maker: `asphalt.result/letcol` (macro) with support for
     * Column types
@@ -45,6 +46,7 @@
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
+  * Default fetch fn in `asphalt.core/query` (arity 3) is now `asphalt.core/fetch-rows`
   * [TODO] Re-implement `asphalt.core/fetch-maps` with options
 
 

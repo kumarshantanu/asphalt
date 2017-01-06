@@ -249,5 +249,5 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     (let [generated-key (a/genkey u/delay-ds t-insert row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
     (is (thrown? SQLTimeoutException
-          (a/query (a/set-params-with-query-timeout 1) a/fetch-single-value
+          (a/query (p/set-params-with-query-timeout 1) a/fetch-single-value
             u/delay-ds t-count [])) "Query should throw exception on delay")))

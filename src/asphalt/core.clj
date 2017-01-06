@@ -291,6 +291,26 @@
 ;;  [:string :int :date]]
 
 
+(defn parse-sql
+  "Given a SQL statement with embedded parameter names return a two-element vector [sql-tokens result-types] where
+  * sql-tokens is a vector of alternating string and param-pair vectors
+  * param-pair is a vector of two elements [param-key param-type] (param keys are used to extract map params)
+  * result-types is a vector of result types
+  See asphalt.type for supported SQL types."
+  ([^String sql]
+    (parse-sql sql {}))
+  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
+                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
+                 :as options}]
+    (let [[sql-template result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
+      [(reduce (fn [st token] (conj st (if (string? token)
+                                         token
+                                         (let [[pname ptype] token]
+                                           [(isql/encode-name pname) (isql/encode-param-type sql ptype)]))))
+         [] sql-template)
+       (mapv (partial isql/encode-result-type sql) result-types)])))
+
+
 (defn build-sql-source
   [sql-template result-types
    {:keys [make-params-setter
@@ -358,26 +378,6 @@
          (make-connection-worker sanitized-st result-types))))))
 
 
-(defn parse-sql
-  "Given a SQL statement with embedded parameter names return a three-element vector:
-  [SQL-template-string
-   param-pairs           (each pair is a two-element vector of param key and type)
-   result-column-types]
-  that can be used later to extract param values from maps."
-  ([^String sql]
-    (parse-sql sql {}))
-  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
-                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
-                 :as options}]
-    (let [[sql-template result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
-      [(reduce (fn [st token] (conj st (if (string? token)
-                                         token
-                                         (let [[pname ptype] token]
-                                           [(isql/encode-name pname) (isql/encode-param-type sql ptype)]))))
-         [] sql-template)
-       (mapv (partial isql/encode-result-type sql) result-types)])))
-
-
 (defmacro defsql
   "Define a parsed SQL template that can be used to execute it later."
   ([var-symbol sql]
@@ -391,15 +391,3 @@
                         (->> opts#
                           (conj (parse-sql ~sql opts#))
                           (apply build-sql-source ))))))
-
-
-;; ----- convenience functions and macros -----
-
-
-(defn set-params-with-query-timeout
-  "Return a params setter fn usable with asphalt.core/query, that times out on query execution and throws a
-  java.sql.SQLTimeoutException instance. Supported by JDBC 4.0 (and higher) drivers only."
-  [^long n-seconds]
-  (fn [sql-source ^PreparedStatement pstmt params]
-    (.setQueryTimeout pstmt n-seconds)
-    (t/set-params sql-source pstmt params)))
