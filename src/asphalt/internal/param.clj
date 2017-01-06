@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 
-(ns asphalt.param.internal
+(ns asphalt.internal.param
   (:require
     [asphalt.internal :as i]
     [asphalt.type :as t])

@@ -10,7 +10,7 @@
 (ns asphalt.param
   (:require
     [asphalt.internal       :as i]
-    [asphalt.param.internal :as pi]
+    [asphalt.internal.param :as iparam]
     [asphalt.type           :as t])
   (:import
     [java.util Calendar TimeZone]
@@ -23,21 +23,21 @@
 (defn date->cal
   "Given a (local) date and a timezone/calendar instance, return a calendar suitable to set SQL date param."
   [^Date date tz-or-cal]
-  (doto ^Calendar (pi/resolve-cal tz-or-cal)
+  (doto ^Calendar (iparam/resolve-cal tz-or-cal)
     (.setTime date)))
 
 
 (defn time->cal
   "Given a (local) time and a timezone/calendar instance, return a calendar suitable to set SQL time param."
   [^Time time tz-or-cal]
-  (doto ^Calendar (pi/resolve-cal tz-or-cal)
+  (doto ^Calendar (iparam/resolve-cal tz-or-cal)
     (.setTimeInMillis (.getTime time))))
 
 
 (defn timestamp->cal
   "Given a (local) timestamp and a timezone/calendar instance, return a calendar suitable to set SQL timestamp param."
   [^Timestamp timestamp tz-or-cal]
-  (doto ^Calendar (pi/resolve-cal tz-or-cal)
+  (doto ^Calendar (iparam/resolve-cal tz-or-cal)
     (.setTimeInMillis (.getTime timestamp))))
 
 
@@ -61,7 +61,7 @@
         params-sym  (gensym "sql-params-")
         param-count (count param-types)
         indices-sym (gensym "param-indices-")
-        indices-exp (pi/params-indices param-keys param-types params-sym)]
+        indices-exp (iparam/params-indices param-keys param-types params-sym)]
     `(let [~params-sym ~params
            ~@(when-not (vector? indices-exp)  ; indices-exp is a vector for single params, S-expr otherwise
                [indices-sym indices-exp])]
@@ -75,7 +75,7 @@
                    (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym))))
            ~@(->> (map vector param-types param-keys)
                (map-indexed (fn [^long idx [t k]]
-                              (pi/lay-param-expr prepared-stmt-sym t
+                              (iparam/lay-param-expr prepared-stmt-sym t
                                 (if (vector? indices-exp)  ; indices-exp is vector for single params, S-expr otherwise
                                   (get indices-exp idx)
                                   `(get ~indices-sym ~idx))
@@ -119,7 +119,7 @@
   "Given a vector/map/nil of SQL params return param keys for use with `set-params`."
   [params]
   (if (vector? params)
-    (pi/cached-indices (count params))
+    (iparam/cached-indices (count params))
     (keys params)))
 
 
@@ -147,10 +147,10 @@
                 (let [k (count v)]  ; iterate over all values of multi-value param
                   (loop [i 0]
                     (when (< i k)
-                      (pi/set-param-value prepared-stmt single-type (unchecked-add pi i) (get v i))
+                      (iparam/set-param-value prepared-stmt single-type (unchecked-add pi i) (get v i))
                       (recur (unchecked-inc i))))
                   (recur (unchecked-add pi k) (next ks) (next ts)))
                 (do
-                  (pi/set-param-value prepared-stmt t pi v)
+                  (iparam/set-param-value prepared-stmt t pi v)
                   (recur (unchecked-inc pi) (next ks) (next ts)))))
             (i/illegal-arg "No value found for key:" k "in" (pr-str params))))))))
