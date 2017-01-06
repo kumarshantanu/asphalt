@@ -88,29 +88,25 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     (is (= 1 (a/query a/fetch-single-value
                u/ds t-count [])) "Verify that row was inserted")
     ;; retrieve
-    (is (= vs1
-          (vec (a/query a/fetch-single-row
-                 u/ds t-select []))))
-    (is (= vs1
-          (vec (a/query (fn [sql-source prepared-statement params]
+    (is (= vs1 (a/query a/fetch-single-row
+                 u/ds t-select [])))
+    (is (= vs1 (a/query (fn [sql-source prepared-statement params]
                           (p/lay-params prepared-statement [:name :string] params))
                  a/fetch-single-row
-                 u/ds t-selfew [(first vs1)]))))
+                 u/ds t-selfew [(first vs1)])))
     ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (let [update-setter (fn [sql-source prepared-statement params]
                           (p/lay-params prepared-statement [:new-salary :int
                                                             :dept       :string] params))]
-      (a/update update-setter
-        u/ds t-update upa)
+      (a/update update-setter u/ds t-update upa)
       (testing "bad vector params"
         (is (thrown? IllegalArgumentException
               (a/update u/ds t-update upb))))
       (testing "vanilla vector params"
         (a/update update-setter u/ds t-update upv))
-      (is (= vs2
-            (vec (a/query a/fetch-single-row
-                   u/ds t-select [])))))))
+      (is (= vs2 (a/query a/fetch-single-row
+                   u/ds t-select []))))))
 
 
 (deftest test-crud
@@ -128,12 +124,8 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     (is (= 1 (a/query a/fetch-single-value
                u/ds t-count [])) "Verify that row was inserted")
     ;; retrieve
-    (is (= vs1
-          (vec (a/query a/fetch-single-row
-                 u/ds t-select []))))
-    (is (= vs1
-          (vec (a/query a/fetch-single-row
-                 u/ds t-selfew [(first vs1)]))))
+    (is (= vs1 (a/query a/fetch-single-row u/ds t-select [])))
+    (is (= vs1 (a/query a/fetch-single-row u/ds t-selfew [(first vs1)])))
     ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (a/update u/ds t-update upa)
@@ -142,13 +134,10 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
             (a/update u/ds t-update upb))))
     (testing "vanilla vector params"
       (a/update u/ds t-update upv))
-    (is (= vs2
-          (vec (a/query a/fetch-single-row
-                 u/ds t-select []))))
+    (is (= vs2 (a/query a/fetch-single-row u/ds t-select [])))
     ;; delete
     (a/update u/ds t-delete [])
-    (is (= 0 (a/query a/fetch-single-value
-               u/ds t-count [])) "Verify that row was deleted")))
+    (is (= 0 (a/query a/fetch-single-value u/ds t-count [])) "Verify that row was deleted")))
 
 
 (deftest test-rows
@@ -156,9 +145,8 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
         vs1 ["Joe Coder" 100000 "Accounts" jd1]
         row (zipmap [:name :salary :dept :joined] vs1)]
     ;; fetch single row in absence of rows
-    (is (= (vec (a/query (partial a/fetch-single-row (a/default-fetch vs1))
-                  u/ds t-select []))
-          vs1))
+    (is (= vs1 (a/query (partial a/fetch-single-row (a/default-fetch vs1))
+                 u/ds t-select [])))
     ;; fetch single column value in absence of rows
     (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch 1000)
                                                     :column-index 2))
@@ -171,11 +159,10 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                 u/ds t-count [])) "Verify that all rows were inserted")
     (doseq [each (a/query a/fetch-rows
                    u/ds t-select [])]
-      (is (= (vec each) vs1)))
+      (is (= vs1 each)))
     ;; fetch single row in presence of multiple rows
-    (is (= (vec (a/query (partial a/fetch-single-row (a/default-fetch nil))
-                  u/ds t-select []))
-          vs1))
+    (is (= vs1 (a/query (partial a/fetch-single-row (a/default-fetch nil))
+                 u/ds t-select [])))
     ;; fetch single column value in absence of rows
     (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch nil)
                                                     :column-index 2))
@@ -207,38 +194,32 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                         (a/query (partial a/fetch-single-row {:row-maker row-maker
                                                               :on-multi (fn [_ _ v] v)})
                           u/ds t-selfew ["Joe Coder"]))]
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [[name salary dept joined] rs]
-                             [name salary dept joined])))))
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [[^string name ^int salary ^string dept ^date joined] rs]
-                             [name salary dept joined])))))
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [[^string name ^int salary ^string dept [^date joined :utc]] rs]
-                             [name salary dept joined])))))
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [{:labels  [^string name]
-                                       :_labels [^int salary]
-                                       ^string dept 3
-                                       ^date   joined 4} rs]
-                             [name salary dept joined])))))
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [{:labels  [^string name [^date joined :utc]]
-                                       :_labels [^int salary]
-                                       ^string dept 3} rs]
-                             [name salary dept joined])))))
-        (is (= vs1
-              (run-query (fn [_ rs _]
-                           (r/letcol [{:labels  [^string name]
-                                       :_labels [^int salary]
-                                       ^string dept 3
-                                       [^date   joined :utc] 4} rs]
-                             [name salary dept joined])))))))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [[name salary dept joined] rs]
+                                  [name salary dept joined])))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [[^string name ^int salary ^string dept ^date joined] rs]
+                                  [name salary dept joined])))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [[^string name ^int salary ^string dept [^date joined :utc]] rs]
+                                  [name salary dept joined])))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [{:labels  [^string name]
+                                            :_labels [^int salary]
+                                            ^string dept 3
+                                            ^date   joined 4} rs]
+                                  [name salary dept joined])))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [{:labels  [^string name [^date joined :utc]]
+                                            :_labels [^int salary]
+                                            ^string dept 3} rs]
+                                  [name salary dept joined])))))
+        (is (= vs1 (run-query (fn [_ rs _]
+                                (r/letcol [{:labels  [^string name]
+                                            :_labels [^int salary]
+                                            ^string dept 3
+                                            [^date   joined :utc] 4} rs]
+                                  [name salary dept joined])))))))))
 
 
 (deftest test-batch-update
@@ -258,8 +239,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
           [ 85003]
           [ 55004]
           [110005]]
-        (mapv vec (a/query a/fetch-rows
-                    u/ds "SELECT salary FROM emp" [])))))
+        (a/query a/fetch-rows u/ds "SELECT salary FROM emp" []))))
 
 
 (deftest test-query-timeout

@@ -62,9 +62,8 @@
     ;; verify result
     (is (= 1 (a/query a/fetch-single-value
                u/ds ct/t-count [])) "Second row should not be inserted")
-    (is (= vs1
-          (vec (a/query a/fetch-single-row
-                 u/ds ct/t-select []))) "Only original values should exist")))
+    (is (= vs1 (a/query a/fetch-single-row
+                 u/ds ct/t-select [])) "Only original values should exist")))
 
 
 ;; ----- propagation tests -----

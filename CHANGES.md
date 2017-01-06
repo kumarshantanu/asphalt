@@ -40,6 +40,7 @@
     * Column index/label lookup
     * Additional arguments for specific result
   * Functions to read result-set column values
+  * [BREAKING CHANGE] Default runtime row-maker returns a vector instead of an array
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
