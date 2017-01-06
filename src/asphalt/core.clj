@@ -114,18 +114,48 @@
 ;; ----- java.sql.ResultSet operations -----
 
 
+(defn label->key
+  "Convert given string (column) label to keyword."
+  [^String label]
+  (keyword (.toLowerCase label)))
+
+
+(defn _label->key
+  "Convert given string (column) label to keyword after replacing underscores with dashes."
+  [^String label]
+  (keyword (.replace (.toLowerCase label) \_ \-)))
+
+
 (defn fetch-maps
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps."
   ([sql-source ^ResultSet result-set]
     (fetch-maps {} sql-source result-set))
-  ([{:keys [fetch-size]
+  ([{:keys [fetch-size
+            key-maker]
+     :or {key-maker label->key}
      :as options}
     sql-source ^ResultSet result-set]
     ;; set fetch size on the JDBC driver
     (when fetch-size
       (.setFetchSize result-set (int fetch-size)))
     ;; fetch rows
-    (doall (resultset-seq result-set))))
+    (let [rows (transient [])
+          ^ResultSetMetaData rsmd (.getMetaData result-set)
+          column-count (.getColumnCount rsmd)
+          column-keys  (let [ks (object-array column-count)]
+                         (loop [i 0]
+                           (when (< i column-count)
+                             (let [j (unchecked-inc i)]
+                               (aset ks i (key-maker (.getColumnLabel rsmd j)))
+                               (recur j))))
+                         (vec ks))
+          row-maker    t/read-row]
+      (when-not (distinct? column-keys)
+        (throw (ex-info "Column keys must be unique" {:column-count column-count
+                                                      :column-keys column-keys})))
+      (while (.next result-set)
+        (conj! rows (zipmap column-keys (row-maker sql-source result-set column-count))))
+      (persistent! rows))))
 
 
 (defn fetch-rows
