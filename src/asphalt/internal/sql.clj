@@ -204,7 +204,7 @@
 
 
 (defn bad-st-arity
-  [^String sql-name ^long n]
+  [^long n ^String sql-name]
   (throw (clojure.lang.ArityException. n (str sql-name " (accepts 2 args)"))))
 
 
