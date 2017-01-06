@@ -10,12 +10,12 @@
 (ns asphalt.core
   (:refer-clojure :exclude [update])
   (:require
-    [clojure.string   :as str]
-    [asphalt.internal.result :as iresult]
-    [asphalt.internal.sql    :as isql]
-    [asphalt.param           :as p]
-    [asphalt.type            :as t]
-    [asphalt.internal        :as i])
+    [clojure.string       :as str]
+    [asphalt.param        :as p]
+    [asphalt.result       :as r]
+    [asphalt.type         :as t]
+    [asphalt.internal     :as i]
+    [asphalt.internal.sql :as isql])
   (:import
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement ResultSet ResultSetMetaData]
@@ -112,57 +112,6 @@
 
 
 ;; ----- java.sql.ResultSet operations -----
-
-
-(defmacro letcol
-  "Destructure column values in the current row in a java.sql.ResultSet instance. Optional SQL type hints increase
-  accuracy and speed. The date, time and timestamp types accept an additional timezone-string/calendar argument.
-
-  Sequential destructuring with implicit column index lookup:
-  (letcol [[^int foo ^string bar [^date baz cal]] result-set]  ; cal is TimeZone keyword/string or java.util.Calendar
-    [foo bar baz])
-
-  Associative destructuring with implicit column label lookup:
-  (letcol [{:labels  [^int foo ^string bar [^date baz cal]]    ; cal is TimeZone keyword/string or java.util.Calendar
-            :_labels [^date end-date ^timestamp audit-ts]]} result-set]
-    ;; :_labels turns dash to underscore when looking up by column label: end_date, audit_ts
-    [foo bar baz end-date audit-ts])
-
-  Associative destructuring with explicit column reference:
-  (letcol [{^int       foo 1  ; column index begins with 1
-            ^string    bar 2
-            ^boolean   baz 3
-            [^date     end-date cal] \"end_date\"              ; cal is TimeZone keyword/string or java.util.Calendar
-            ^timestamp audit-ts \"audit_ts\"} result-set]
-    [foo bar baz end-date audit-ts])"
-  [binding & body]
-  (i/expected vector? "a binding vector" binding)
-  (i/expected #(= 2 (count %)) "binding vector of two forms" binding)
-  (let [[lhs result-set] binding  ; LHS = Left-Hand-Side in a binding pair, for the lack of a better expression
-        result-set-sym (with-meta (gensym "result-set-") {:tag "java.sql.ResultSet"})
-        make-bindings  #(mapcat (fn [[sym col-ref]]
-                                  (iresult/read-column-binding sym result-set-sym col-ref)) %)]
-    (cond
-      (vector? lhs) (do (i/expected #(every? (complement #{:as '&}) %)
-                          ":as and & not to be in sequential destructuring" lhs)
-                      `(let [~result-set-sym ~result-set
-                             ~@(->> lhs
-                                 (map-indexed (fn [^long idx each] [each (inc idx)]))
-                                 make-bindings)]
-                         ~@body))
-      (map? lhs)    (let [k-bindings (fn [k f] (->> (get lhs k)
-                                                 (map #(vector % (f (first (i/as-vector %)))))  ; turn into pairs
-                                                 make-bindings))]
-                      (i/expected #(every? (some-fn #{:labels :_labels} (complement keyword?)) (keys %))
-                        "keyword keys to be only :labels or :_labels in associative destructuring" lhs)
-                      `(let [~result-set-sym ~result-set
-                             ~@(k-bindings :labels  str)
-                             ~@(k-bindings :_labels #(str/replace (str %) \- \_))
-                             ~@(->> (seq lhs)
-                                 (remove (comp keyword? first))  ; remove pairs where keys are keywords
-                                 make-bindings)]
-                         ~@body))
-      :otherwise    (i/expected "vector (sequential) or map (associative) destructuring form" lhs))))
 
 
 (defn fetch-maps
@@ -342,38 +291,24 @@
 
 (defn build-sql-source
   [sql-template result-types
-   {:keys [make-param-setter
+   {:keys [make-params-setter
            make-row-maker
            make-column-reader
            sql-name]
-    :or {make-param-setter  (fn [param-keys param-types]
-                              (eval `(fn [^PreparedStatement prepared-stmt# params#]
-                                       (p/lay-params prepared-stmt# ~param-keys ~param-types params#))))
-         make-row-maker     (fn [result-types]
-                              (if (seq result-types)
-                                (do
-                                  (i/expected vector? "vector of result types" result-types)
-                                  (doseq [t result-types]
-                                    (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
-                                  (let [rsyms (-> (count result-types)
-                                                (repeatedly gensym)
-                                                vec)
-                                        rlhs  (mapv vector rsyms result-types)]
-                                    (eval `(fn [^ResultSet result-set# ^long col-count#]
-                                             (when-not (= col-count# ~(count result-types))
-                                               (i/expected ~(str (count result-types) " columns") col-count#))
-                                             (letcol [~rlhs result-set#]
-                                               ~rsyms)))))
-                                iresult/read-columns))
-         make-column-reader (fn [result-types]
-                              (let [n ^long (if (seq result-types)
-                                              (count result-types)
-                                              Integer/MAX_VALUE)
-                                    s (str "integer from 1 to " n)]
-                                (fn [^ResultSet result-set ^long col-index]
-                                  (when-not (<= 1 col-index n)
-                                    (i/expected s col-index))
-                                  (iresult/read-column-value result-set col-index))))
+    :or {make-params-setter (fn [param-keys param-types] (if (seq param-keys)
+                                                           (p/make-params-layer param-keys param-types)
+                                                           p/set-params))
+         make-row-maker     (fn [result-types] (if (seq result-types)
+                                                 (r/make-columns-reader result-types)
+                                                 r/read-columns))
+         make-column-reader (fn [result-types] (if (seq result-types)
+                                                 (let [n (count result-types)
+                                                       s (str "integer from 1 to " n)]
+                                                   (fn [^ResultSet result-set ^long col-index]
+                                                     (when-not (<= 1 col-index n)
+                                                       (i/expected s col-index))
+                                                     (r/read-column-value result-set col-index)))
+                                                 r/read-column-value))
          sql-name           (gensym "sql-name-")}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-template)
@@ -396,7 +331,7 @@
        (isql/->StaticSqlTemplate
          sql-name
          (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
-         (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
+         (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types))
        (isql/->DynamicSqlTemplate
@@ -408,7 +343,7 @@
                                                                   token)))  (conj (pop st) (str (last st) \?))
                                   :otherwise                                (conj st token)))
            [] sanitized-st)
-         (make-param-setter (mapv first kt-pairs) (mapv second kt-pairs))
+         (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types))))))
 

@@ -102,6 +102,13 @@
        ~params)))
 
 
+(defn make-params-layer
+  "Given param keys and types, return a type-aware efficient params setter fn."
+  [param-keys param-types]
+  (eval `(fn [^PreparedStatement prepared-stmt# params#]
+           (lay-params prepared-stmt# ~param-keys ~param-types params#))))
+
+
 ;; ----- set SQL params at runtime -----
 
 

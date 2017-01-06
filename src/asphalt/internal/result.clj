@@ -16,9 +16,6 @@
     [java.sql Blob Clob ResultSet ResultSetMetaData]))
 
 
-;; ----- read ResultSet column at runtime -----
-
-
 (defn read-column-value
   ([^ResultSet result-set ^long column-index]
     (let [data (.getObject result-set column-index)]
@@ -55,25 +52,6 @@
       :time       (.getTime      result-set column-index)
       :timestamp  (.getTimestamp result-set column-index)
       (i/expected-result-type column-type))))
-
-
-(defn read-columns
-  ([^ResultSet result-set ^long column-count]
-    (let [^objects row (object-array column-count)]
-      (loop [i (int 0)]
-        (when (< i column-count)
-          (let [j (unchecked-inc i)]
-            (aset row i (read-column-value result-set j))
-            (recur j))))
-      (vec row)))
-  ([column-types ^ResultSet result-set ^long column-count]
-    (let [^objects row (object-array column-count)]
-      (loop [i (int 0)]
-        (when (< i column-count)
-          (let [j (unchecked-inc i)]
-            (aset row i (read-column-value (get column-types i) result-set j))
-            (recur j))))
-      (vec row))))
 
 
 ;; ----- read ResultSet columns with type information -----

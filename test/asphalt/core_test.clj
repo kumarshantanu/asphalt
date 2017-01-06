@@ -13,6 +13,7 @@
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
     [asphalt.param     :as p]
+    [asphalt.result    :as r]
     [asphalt.type      :as t]
     [asphalt.transaction :as x])
   (:import
@@ -50,8 +51,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 -- ^boolean gender,
 ^int salary, ^string dept, ^date joined FROM emp")
 
-(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
-  {:make-param-setter (fn [param-keys param-types] p/set-params)})
+(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?")
 
 ;(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
 ;  a/fetch-single-row {})
@@ -209,32 +209,32 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                           u/ds t-selfew ["Joe Coder"]))]
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [[name salary dept joined] rs]
+                           (r/letcol [[name salary dept joined] rs]
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [[^string name ^int salary ^string dept ^date joined] rs]
+                           (r/letcol [[^string name ^int salary ^string dept ^date joined] rs]
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [[^string name ^int salary ^string dept [^date joined :utc]] rs]
+                           (r/letcol [[^string name ^int salary ^string dept [^date joined :utc]] rs]
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [{:labels  [^string name]
+                           (r/letcol [{:labels  [^string name]
                                        :_labels [^int salary]
                                        ^string dept 3
                                        ^date   joined 4} rs]
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [{:labels  [^string name [^date joined :utc]]
+                           (r/letcol [{:labels  [^string name [^date joined :utc]]
                                        :_labels [^int salary]
                                        ^string dept 3} rs]
                              [name salary dept joined])))))
         (is (= vs1
               (run-query (fn [_ rs _]
-                           (a/letcol [{:labels  [^string name]
+                           (r/letcol [{:labels  [^string name]
                                        :_labels [^int salary]
                                        ^string dept 3
                                        [^date   joined :utc] 4} rs]

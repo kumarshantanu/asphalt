@@ -30,17 +30,20 @@
 * Params setter utility in `asphalt.param` namespace
   * Macro `lay-params` (available at macro-expansion time, efficient)
   * Function `set-params` (available at run time, flexible)
-  * Param types (single-value and multi-value)
-  * Param position/name reference (vector/map/nil params)
-  * Additional coercion arguments
+  * Support for param types (single-value and multi-value)
+  * Support for param position/name reference (vector/map/nil params)
+  * Support for additional coercion arguments
+  * Functions to convert date/time/timestamp to `java.util.Calendar` with timezone
+* Result-columns reading utility in `asphalt.result` namespace
+  * Efficient row-maker: `asphalt.result/letcol` (macro) with support for
+    * Column types
+    * Column index/label lookup
+    * Additional arguments for specific result
+  * Functions to read result-set column values
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
-  * Efficient row-maker: `asphalt.core/letcol` (macro) with support for
-    * Column types
-    * Column index/label lookup
-    * Additional arguments for specific result
 
 
 ## 0.4.0 / 2015-November-30

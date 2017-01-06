@@ -11,8 +11,8 @@
   (:require
     [clojure.string   :as string]
     [asphalt.internal :as i]
-    [asphalt.internal.result :as iresult]
     [asphalt.param    :as p]
+    [asphalt.result   :as r]
     [asphalt.type     :as t])
   (:import
     [java.sql PreparedStatement ResultSet]))
@@ -231,12 +231,12 @@
   ;;==============
   (get-sql    [sql params] sql)
   (set-params [sql prepared-stmt params] (p/set-params prepared-stmt params))
-  (read-col   [sql result-set column-index] (iresult/read-column-value result-set column-index))
-  (read-row   [sql result-set column-count] (iresult/read-columns result-set column-count))
+  (read-col   [sql result-set column-index] (r/read-column-value result-set column-index))
+  (read-row   [sql result-set column-count] (r/read-columns result-set column-count))
   ;;============
   java.util.List
   ;;============
   (get-sql    [this params] (make-sql this params))
   (set-params [this prepared-stmt params] (p/set-params prepared-stmt params))
-  (read-col   [this result-set col-index] (iresult/read-column-value result-set col-index))
-  (read-row   [this result-set col-count] (iresult/read-columns result-set col-count)))
+  (read-col   [this result-set col-index] (r/read-column-value result-set col-index))
+  (read-row   [this result-set col-count] (r/read-columns result-set col-count)))
