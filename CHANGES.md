@@ -8,14 +8,20 @@
 
 ## 0.5.0 / 2017-January-??
 
-* Have `asphalt.internal.SQLTemplate` implement the `clojure.lang.Named` interface
-  * Have `defsql` support named SQL via `SQLTemplate` by accepting `:sql-name` option kwarg
 * [TODO] Instrumentation logging event for SQL-execution should include `ISqlSource` instead of SQL string
-* [TODO] Params setter can be specified via `defsql`
-* [TODO] Make `SqlTemplate` double as fn `(f connection-source sql-source params)`
-  * [TODO] Deprecate `defquery`
-* [TODO] Remove deprecated `asphalt.core/instrument-datasource`
-* [TODO] Add support for variable/multi positional params `{:? [vals...]}` in named params
+* [TODO] Overhaul `asphalt.core/defsql`
+  * Named by default
+    * Implement `clojure.lang.Named` interface, hence `(name sql-source)` works
+    * Name can be overridden via `:sql-name` option kwarg
+  * Multi-value parameters (e.g. `IN (^ints $dept-ids)` clauses)
+    * Applicable to type-hinted, named parameters only
+    * Comma separated `?` placeholder
+  * Configurable associations
+    * Param setter  : auto-default to use param types when specified
+    * Row maker     : auto-default to use result types when specified
+    * Column reader : default is used
+    * [TODO] Connection worker : default to `query` vs `update` based on first SQL token
+  * [TODO] Behave as function `(f connection-source params)` - with associated connection-worker
 * Transactions
   * Do not override the exception causing rollback/commit by the exception in rollback/commit
 * Types/Protocols
@@ -29,6 +35,7 @@
   * Additional coercion arguments
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
+  * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
   * Helper fn `asphalt.core/default-fetch` for default values in single row access
   * Efficient row-maker: `asphalt.core/letcol` (macro) with support for
     * Column types

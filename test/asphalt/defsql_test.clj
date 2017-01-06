@@ -10,7 +10,8 @@
 (ns asphalt.defsql-test
   (:require
     [clojure.test :refer :all]
-    [asphalt.core :as a]))
+    [asphalt.core :as a]
+    [asphalt.type :as t]))
 
 
 (a/defsql create-table "CREATE TABLE emp (empid INT NOT NULL PRIMARY KEY, empname VARCHAR(50) NOT NULL)")
@@ -23,3 +24,19 @@
 (deftest test-default
   (is (= (name create-table) "create-table"))
   (is (= (name insert-emp) "add-new-emp")))
+
+
+(a/defsql find-employees-by-dept
+  "SELECT ^string name, ^int age, ^date joined FROM emp WHERE dept_id=^int $dept-id")
+
+
+(a/defsql find-employees-by-level
+  "SELECT ^string name, ^int age, ^date joined FROM emp WHERE dept_id=^int $dept-id AND level IN (^ints $levels)")
+
+
+(deftest test-defsql
+  (is (= "SELECT name, age, joined FROM emp WHERE dept_id=?"
+        (t/get-sql find-employees-by-dept {:dept-id 20})))
+  (is (= "SELECT name, age, joined FROM emp WHERE dept_id=? AND level IN (?, ?, ?)"
+        (t/get-sql find-employees-by-level {:dept-id 20
+                                            :levels [10 20 30]}))))

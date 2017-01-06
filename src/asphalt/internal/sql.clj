@@ -11,6 +11,8 @@
   (:require
     [clojure.string   :as string]
     [asphalt.internal :as i]
+    [asphalt.internal.result :as iresult]
+    [asphalt.param    :as p]
     [asphalt.type     :as t])
   (:import
     [java.sql PreparedStatement ResultSet]))
@@ -182,10 +184,10 @@
 
 (defn make-sql
   ^String
-  [sql-template params]
+  [sql-tokens params]
   (let [^StringBuilder sb (StringBuilder.)]
     (i/each-indexed [i 0
-                     token sql-template]
+                     token sql-tokens]
       (if (string? token)
         (.append sb ^String token)
         (let [[param-key param-type] token]
@@ -221,3 +223,20 @@
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
   (read-col   [this result-set col-index] (column-reader result-set col-index))
   (read-row   [this result-set col-count] (row-maker result-set col-count)))
+
+
+(extend-protocol t/ISqlSource
+  ;;==============
+  java.lang.String
+  ;;==============
+  (get-sql    [sql params] sql)
+  (set-params [sql prepared-stmt params] (p/set-params prepared-stmt params))
+  (read-col   [sql result-set column-index] (iresult/read-column-value result-set column-index))
+  (read-row   [sql result-set column-count] (iresult/read-columns result-set column-count))
+  ;;============
+  java.util.List
+  ;;============
+  (get-sql    [this params] (make-sql this params))
+  (set-params [this prepared-stmt params] (p/set-params prepared-stmt params))
+  (read-col   [this result-set col-index] (iresult/read-column-value result-set col-index))
+  (read-row   [this result-set col-count] (iresult/read-columns result-set col-count)))

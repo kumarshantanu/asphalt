@@ -13,6 +13,7 @@
     [clojure.string   :as str]
     [asphalt.internal.result :as iresult]
     [asphalt.internal.sql    :as isql]
+    [asphalt.param           :as p]
     [asphalt.type            :as t]
     [asphalt.internal        :as i])
   (:import
@@ -331,39 +332,6 @@
 ;; ----- parse SQL for named parameters and types -----
 
 
-(defn parse-sql
-  "Given a SQL statement with embedded parameter names return a three-element vector:
-  [SQL-template-string
-   param-pairs           (each pair is a two-element vector of param key and type)
-   result-column-types]
-  that can be used later to extract param values from maps."
-  ([^String sql]
-    (parse-sql sql {}))
-  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
-                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
-                 :as options}]
-    (let [[sql named-params return-col-types]  (i/parse-sql-str sql escape-char param-start-char type-start-char)]
-      (i/make-sql-template
-        sql-name
-        sql
-        (mapv #(let [[p-name p-type] %]
-                 [(i/encode-name p-name) (i/encode-type p-type sql)])
-          named-params)
-        (mapv #(i/encode-type % sql) return-col-types)))))
-
-
-(defmacro defsql
-  "Define a parsed SQL template that can be used to execute it later."
-  ([var-symbol sql]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
-    `(defsql ~var-symbol ~sql {}))
-  ([var-symbol sql options]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
-    `(def ~var-symbol (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options)))))
-
-
 ;; Parseable SQL:
 ;; "SELECT ^string name, ^int age, ^date joined FROM emp WHERE dept_id=^int $dept-id AND level IN (^ints $levels)"
 ;;
@@ -445,6 +413,41 @@
          (make-column-reader result-types))))))
 
 
+(defn parse-sql
+  "Given a SQL statement with embedded parameter names return a three-element vector:
+  [SQL-template-string
+   param-pairs           (each pair is a two-element vector of param key and type)
+   result-column-types]
+  that can be used later to extract param values from maps."
+  ([^String sql]
+    (parse-sql sql {}))
+  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
+                 :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
+                 :as options}]
+    (let [[sql-template result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
+      [(reduce (fn [st token] (conj st (if (string? token)
+                                         token
+                                         (let [[pname ptype] token]
+                                           [(isql/encode-name pname) (isql/encode-param-type sql ptype)]))))
+         [] sql-template)
+       (mapv (partial isql/encode-result-type sql) result-types)])))
+
+
+(defmacro defsql
+  "Define a parsed SQL template that can be used to execute it later."
+  ([var-symbol sql]
+    (when-not (symbol? var-symbol)
+      (i/expected "a symbol" var-symbol))
+    `(defsql ~var-symbol ~sql {}))
+  ([var-symbol sql options]
+    (when-not (symbol? var-symbol)
+      (i/expected "a symbol" var-symbol))
+    `(def ~var-symbol (let [opts# (merge {:sql-name ~(name var-symbol)} ~options)]
+                        (->> opts#
+                          (conj (parse-sql ~sql opts#))
+                          (apply build-sql-source ))))))
+
+
 ;; ----- convenience functions and macros -----
 
 
@@ -455,20 +458,3 @@
   (fn [sql-source ^PreparedStatement pstmt params]
     (.setQueryTimeout pstmt n-seconds)
     (t/set-params sql-source pstmt params)))
-
-
-(defmacro defquery
-  "Compose a SQL query template and a fetch fn into a convenience arity-2 (data-source-or-connection, params) fn.
-  Option map may include :params-setter corresponding to an arity-3 fn for setting query parameters."
-  ([var-symbol sql result-set-worker]
-    `(defquery ~var-symbol ~sql ~result-set-worker {}))
-  ([var-symbol sql result-set-worker options]
-    (let [sql-template-sym (gensym "sql-template-")]
-      `(let [~sql-template-sym (parse-sql ~sql (merge {:sql-name ~(name var-symbol)} ~options))
-             query-fetch# (if-let [params-setter# (:params-setter ~options)]
-                            (partial query params-setter# ~result-set-worker)
-                            (partial query ~result-set-worker))]
-         (defn ~var-symbol
-           ~(str "Execute SQL query using fetch fn " result-set-worker)
-           [data-source-or-connection# params#]
-           (query-fetch# data-source-or-connection# ~sql-template-sym params#))))))

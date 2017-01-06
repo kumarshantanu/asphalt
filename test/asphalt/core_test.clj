@@ -50,10 +50,11 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 -- ^boolean gender,
 ^int salary, ^string dept, ^date joined FROM emp")
 
-(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?")
+(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
+  {:make-param-setter (fn [param-keys param-types] p/set-params)})
 
-(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
-  a/fetch-single-row {})
+;(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
+;  a/fetch-single-row {})
 
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
 
@@ -95,7 +96,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                           (p/lay-params prepared-statement [:name :string] params))
                  a/fetch-single-row
                  u/ds t-selfew [(first vs1)]))))
-    (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
+    ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (let [update-setter (fn [sql-source prepared-statement params]
                           (p/lay-params prepared-statement [:new-salary :int
@@ -103,7 +104,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
       (a/update update-setter
         u/ds t-update upa)
       (testing "bad vector params"
-        (is (thrown? ExceptionInfo
+        (is (thrown? IllegalArgumentException
               (a/update u/ds t-update upb))))
       (testing "vanilla vector params"
         (a/update update-setter u/ds t-update upv))
@@ -133,11 +134,11 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     (is (= vs1
           (vec (a/query a/fetch-single-row
                  u/ds t-selfew [(first vs1)]))))
-    (is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
+    ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
     ;; update
     (a/update u/ds t-update upa)
     (testing "bad vector params"
-      (is (thrown? ExceptionInfo
+      (is (thrown? IllegalArgumentException
             (a/update u/ds t-update upb))))
     (testing "vanilla vector params"
       (a/update u/ds t-update upv))
@@ -241,11 +242,12 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 
 
 (deftest test-batch-update
-  (a/batch-update u/ds t-insert [["Joe Coder"     100000 "Accounts"]
-                                 ["Harry Hacker"   90000 "R&D"]
-                                 ["Sam Librarian"  85000 "Library"]
-                                 ["Kishore Newbie" 55000 "Sales"]
-                                 ["Neal Manager"  110000 "Marketing"]])
+  (let [jd1 (u/make-date)]
+    (a/batch-update u/ds t-insert [["Joe Coder"     100000 "Accounts"  jd1]
+                                   ["Harry Hacker"   90000 "R&D"       jd1]
+                                   ["Sam Librarian"  85000 "Library"   jd1]
+                                   ["Kishore Newbie" 55000 "Sales"     jd1]
+                                   ["Neal Manager"  110000 "Marketing" jd1]]))
   (a/batch-update u/ds t-batch-update [[100001 1]
                                        [ 90002 2]
                                        [ 85003 3]
