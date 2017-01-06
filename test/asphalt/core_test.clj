@@ -32,11 +32,11 @@
 
 
 ;"CREATE TABLE emp
-;id        INT PRIMARY KEY AUTO_INCREMENT,
-;emp_name  VARCHAR(50) NOT NULL,
-;salary    INT NOT NULL,
-;dept      VARCHAR(50),
-;join_date DATE NOT NULL"
+;id     INT PRIMARY KEY AUTO_INCREMENT,
+;name   VARCHAR(50) NOT NULL,
+;salary INT NOT NULL,
+;dept   VARCHAR(50),
+;j_date DATE NOT NULL"
 
 
 ;; ----- templates -----
@@ -44,16 +44,16 @@
 
 (a/defsql t-count  "SELECT COUNT(*) FROM emp")
 
-(a/defsql t-insert "INSERT INTO emp (name, salary, dept, joined)
+(a/defsql t-insert "INSERT INTO emp (name, salary, dept, j_date)
 VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 
 (a/defsql t-select "SELECT ^string name, -- ^int age,
 -- ^boolean gender,
-^int salary, ^string dept, ^date joined FROM emp")
+^int salary, ^string dept, ^date j_date FROM emp")
 
-(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?")
+(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?")
 
-(a/defsql t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
+(a/defsql t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?"
   {:make-connection-worker (constantly (partial a/query a/fetch-single-row))})
 
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
@@ -205,15 +205,15 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                                   [name salary dept joined])))))
         (is (= vs1 (run-query (fn [_ rs _]
                                 (r/letcol [{:labels  [^string name]
-                                            :_labels [^int salary]
-                                            ^string dept 3
-                                            ^date   joined 4} rs]
-                                  [name salary dept joined])))))
+                                            :_labels [^date   j-date]
+                                            ^int salary 2
+                                            ^string dept 3} rs]
+                                  [name salary dept j-date])))))
         (is (= vs1 (run-query (fn [_ rs _]
-                                (r/letcol [{:labels  [^string name [^date joined :utc]]
+                                (r/letcol [{:labels  [^string name [^date j_date :utc]]
                                             :_labels [^int salary]
                                             ^string dept 3} rs]
-                                  [name salary dept joined])))))
+                                  [name salary dept j_date])))))
         (is (= vs1 (run-query (fn [_ rs _]
                                 (r/letcol [{:labels  [^string name]
                                             :_labels [^int salary]

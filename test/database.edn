@@ -8,6 +8,6 @@
     name   VARCHAR(50) NOT NULL,
     salary INT NOT NULL,
     dept   VARCHAR(50),
-    joined DATE
+    j_date DATE
 )"
  :drop-ddl "DROP TABLE emp"}
