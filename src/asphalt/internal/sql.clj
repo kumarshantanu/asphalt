@@ -203,26 +203,87 @@
 ;; ----- SQL templates -----
 
 
+(defn bad-st-arity
+  [^String sql-name ^long n]
+  (throw (clojure.lang.ArityException. n (str sql-name " (accepts 2 args)"))))
+
+
 (defrecord StaticSqlTemplate
-  [^String sql-name ^String sql param-setter row-maker column-reader]
+  [^String sql-name ^String sql param-setter row-maker column-reader connection-worker]
   clojure.lang.Named
-  (getName [_] sql-name)
+  (getNamespace [_] nil)
+  (getName      [_] sql-name)
   t/ISqlSource
   (get-sql    [this params] sql)
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
   (read-col   [this result-set col-index] (column-reader result-set col-index))
-  (read-row   [this result-set col-count] (row-maker result-set col-count)))
+  (read-row   [this result-set col-count] (row-maker result-set col-count))
+  clojure.lang.IFn
+  (applyTo    [this args] (let [n (count args)]
+                            (if (= 2 n)
+                              (apply connection-worker args)
+                              (bad-st-arity n sql-name))))
+  (invoke     [this] (bad-st-arity 0 sql-name))
+  (invoke     [this a] (bad-st-arity 1 sql-name))
+  (invoke     [this connection-source params] (connection-worker connection-source this params))
+  (invoke     [this a b c] (bad-st-arity 3 sql-name))
+  (invoke     [this a b c d] (bad-st-arity 4 sql-name))
+  (invoke     [this a b c d e] (bad-st-arity 5 sql-name))
+  (invoke     [this a b c d e f] (bad-st-arity 6 sql-name))
+  (invoke     [this a b c d e f g] (bad-st-arity 7 sql-name))
+  (invoke     [this a b c d e f g h] (bad-st-arity 8 sql-name))
+  (invoke     [this a b c d e f g h i] (bad-st-arity 9 sql-name))
+  (invoke     [this a b c d e f g h i j] (bad-st-arity 10 sql-name))
+  (invoke     [this a b c d e f g h i j k] (bad-st-arity 11 sql-name))
+  (invoke     [this a b c d e f g h i j k l] (bad-st-arity 12 sql-name))
+  (invoke     [this a b c d e f g h i j k l m] (bad-st-arity 13 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n] (bad-st-arity 14 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o] (bad-st-arity 15 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p] (bad-st-arity 16 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q] (bad-st-arity 17 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r] (bad-st-arity 18 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s] (bad-st-arity 19 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s t] (bad-st-arity 20 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s t u] (bad-st-arity (+ 20 (alength u)) sql-name)))
 
 
 (defrecord DynamicSqlTemplate
-  [^String sql-name sql-template param-setter row-maker column-reader]
+  [^String sql-name sql-template param-setter row-maker column-reader connection-worker]
   clojure.lang.Named
-  (getName [_] sql-name)
+  (getNamespace [_] nil)
+  (getName      [_] sql-name)
   t/ISqlSource
   (get-sql    [this params] (make-sql sql-template params))
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
   (read-col   [this result-set col-index] (column-reader result-set col-index))
-  (read-row   [this result-set col-count] (row-maker result-set col-count)))
+  (read-row   [this result-set col-count] (row-maker result-set col-count))
+  clojure.lang.IFn
+  (applyTo    [this args] (let [n (count args)]
+                            (if (= 2 n)
+                              (apply connection-worker args)
+                              (bad-st-arity n sql-name))))
+  (invoke     [this] (bad-st-arity 0 sql-name))
+  (invoke     [this a] (bad-st-arity 1 sql-name))
+  (invoke     [this connection-source params] (connection-worker connection-source this params))
+  (invoke     [this a b c] (bad-st-arity 3 sql-name))
+  (invoke     [this a b c d] (bad-st-arity 4 sql-name))
+  (invoke     [this a b c d e] (bad-st-arity 5 sql-name))
+  (invoke     [this a b c d e f] (bad-st-arity 6 sql-name))
+  (invoke     [this a b c d e f g] (bad-st-arity 7 sql-name))
+  (invoke     [this a b c d e f g h] (bad-st-arity 8 sql-name))
+  (invoke     [this a b c d e f g h i] (bad-st-arity 9 sql-name))
+  (invoke     [this a b c d e f g h i j] (bad-st-arity 10 sql-name))
+  (invoke     [this a b c d e f g h i j k] (bad-st-arity 11 sql-name))
+  (invoke     [this a b c d e f g h i j k l] (bad-st-arity 12 sql-name))
+  (invoke     [this a b c d e f g h i j k l m] (bad-st-arity 13 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n] (bad-st-arity 14 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o] (bad-st-arity 15 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p] (bad-st-arity 16 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q] (bad-st-arity 17 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r] (bad-st-arity 18 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s] (bad-st-arity 19 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s t] (bad-st-arity 20 sql-name))
+  (invoke     [this a b c d e f g h i j k l m n o p q r s t u] (bad-st-arity (+ 20 (alength u)) sql-name)))
 
 
 (extend-protocol t/ISqlSource

@@ -53,8 +53,8 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 
 (a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?")
 
-;(a/defquery t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
-;  a/fetch-single-row {})
+(a/defsql t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date joined FROM emp WHERE name = ?"
+  {:make-connection-worker (constantly (partial a/query a/fetch-single-row))})
 
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
 
@@ -94,7 +94,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                           (p/lay-params prepared-statement [:name :string] params))
                  a/fetch-single-row
                  u/ds t-selfew [(first vs1)])))
-    ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
+    (is (= vs1 (t-qfetch u/ds [(first vs1)])))
     ;; update
     (let [update-setter (fn [sql-source prepared-statement params]
                           (p/lay-params prepared-statement [:new-salary :int
@@ -126,7 +126,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     ;; retrieve
     (is (= vs1 (a/query a/fetch-single-row u/ds t-select [])))
     (is (= vs1 (a/query a/fetch-single-row u/ds t-selfew [(first vs1)])))
-    ;;(is (= vs1 (vec (t-qfetch u/ds [(first vs1)]))))
+    (is (= vs1 (t-qfetch u/ds [(first vs1)])))
     ;; update
     (a/update u/ds t-update upa)
     (testing "bad vector params"

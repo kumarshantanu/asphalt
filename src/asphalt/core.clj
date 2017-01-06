@@ -224,6 +224,8 @@
   "Execute query with params and process the java.sql.ResultSet instance with result-set-worker. The java.sql.ResultSet
   instance is closed in the end, so result-set-worker should neither close it nor make a direct/indirect reference to
   it in the value it returns."
+  ([connection-source sql-source params]
+    (query t/set-params fetch-rows connection-source sql-source params))
   ([result-set-worker connection-source sql-source params]
     (query t/set-params result-set-worker connection-source sql-source params))
   ([params-setter result-set-worker connection-source sql-source params]
@@ -294,22 +296,28 @@
    {:keys [make-params-setter
            make-row-maker
            make-column-reader
+           make-connection-worker
            sql-name]
-    :or {make-params-setter (fn [param-keys param-types] (if (seq param-keys)
-                                                           (p/make-params-layer param-keys param-types)
-                                                           p/set-params))
-         make-row-maker     (fn [result-types] (if (seq result-types)
-                                                 (r/make-columns-reader result-types)
-                                                 r/read-columns))
-         make-column-reader (fn [result-types] (if (seq result-types)
-                                                 (let [n (count result-types)
-                                                       s (str "integer from 1 to " n)]
-                                                   (fn [^ResultSet result-set ^long col-index]
-                                                     (when-not (<= 1 col-index n)
-                                                       (i/expected s col-index))
-                                                     (r/read-column-value result-set col-index)))
-                                                 r/read-column-value))
-         sql-name           (gensym "sql-name-")}
+    :or {make-params-setter     (fn [param-keys param-types] (if (seq param-keys)
+                                                               (p/make-params-layer param-keys param-types)
+                                                               p/set-params))
+         make-row-maker         (fn [result-types] (if (seq result-types)
+                                                     (r/make-columns-reader result-types)
+                                                     r/read-columns))
+         make-column-reader     (fn [result-types] (if (seq result-types)
+                                                     (let [n (count result-types)
+                                                           s (str "integer from 1 to " n)]
+                                                       (fn [^ResultSet result-set ^long col-index]
+                                                         (when-not (<= 1 col-index n)
+                                                           (i/expected s col-index))
+                                                         (r/read-column-value result-set col-index)))
+                                                     r/read-column-value))
+         make-connection-worker (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
+                                                                                           str/trim
+                                                                                           str/lower-case
+                                                                                           (.startsWith "select")))
+                                                                query update))
+         sql-name               (gensym "sql-name-")}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-template)
   (i/expected vector? "vector of result column types" result-types)
@@ -333,7 +341,8 @@
          (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
-         (make-column-reader result-types))
+         (make-column-reader result-types)
+         (make-connection-worker sanitized-st result-types))
        (isql/->DynamicSqlTemplate
          sql-name
          (reduce (fn [st token] (cond
@@ -345,7 +354,8 @@
            [] sanitized-st)
          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
-         (make-column-reader result-types))))))
+         (make-column-reader result-types)
+         (make-connection-worker sanitized-st result-types))))))
 
 
 (defn parse-sql
