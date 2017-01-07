@@ -114,26 +114,17 @@
 ;; ----- java.sql.ResultSet operations -----
 
 
-(defn label->key
-  "Convert given string (column) label to keyword."
-  [^String label]
-  (keyword (.toLowerCase label)))
-
-
-(defn _label->key
-  "Convert given string (column) label to keyword after replacing underscores with dashes."
-  [^String label]
-  (keyword (.replace (.toLowerCase label) \_ \-)))
-
-
 (defn fetch-maps
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps. It is required
-  for asphalt.type.ISqlSource/read-row to return a vector of all column values for the sql-source."
+  for asphalt.type.ISqlSource/read-row to return a vector of all column values for the sql-source.
+  Options:
+    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
+    :key-maker  (arity-1 fn, default: asphalt.result/label->key) converts column label to column key"
   ([sql-source ^ResultSet result-set]
     (fetch-maps {} sql-source result-set))
   ([{:keys [fetch-size
             key-maker]
-     :or {key-maker label->key}
+     :or {key-maker r/label->key}
      :as options}
     sql-source ^ResultSet result-set]
     ;; set fetch size on the JDBC driver

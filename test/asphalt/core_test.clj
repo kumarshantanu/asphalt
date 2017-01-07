@@ -193,7 +193,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
       (let [rows (a/query a/fetch-maps
                    u/ds t-selfew ["Joe Coder"])]
         (is (= (zipmap [:name :salary :dept :j_date] vs1) (first rows))))
-      (let [rows (a/query (partial a/fetch-maps {:key-maker a/_label->key})
+      (let [rows (a/query (partial a/fetch-maps {:key-maker r/_label->key})
                    u/ds t-selfew ["Joe Coder"])]
         (is (= (zipmap [:name :salary :dept :j-date] vs1) (first rows)))))
     ;; test letcol

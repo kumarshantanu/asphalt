@@ -112,3 +112,18 @@
             (aset row i (read-column-value (get column-types i) result-set j))
             (recur j))))
       (vec row))))
+
+
+;; ----- helper utility fns for asphalt.core/fetch-maps -----
+
+
+(defn label->key
+  "Convert given string (column) label to keyword."
+  [^String label]
+  (keyword (.toLowerCase label)))
+
+
+(defn _label->key
+  "Convert given string (column) label to keyword after replacing underscores with dashes."
+  [^String label]
+  (keyword (.replace (.toLowerCase label) \_ \-)))
