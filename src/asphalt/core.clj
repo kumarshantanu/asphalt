@@ -178,13 +178,6 @@
       (persistent! rows))))
 
 
-(defn default-fetch
-  "Given a default value, return the option map to be used to fetch from a single row."
-  [v]
-  {:on-empty (constantly v)
-   :on-multi (fn [_ _ v] v)})
-
-
 (defn fetch-single-row
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row."
   ([sql-source ^ResultSet result-set]
@@ -212,6 +205,20 @@
       (on-empty sql-source result-set))))
 
 
+(defn fetch-optional-row
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row if one exists, nil (or specified
+  default) otherwise.
+  Options:
+    :default (any value) default value to return when no row is found"
+  ([sql-source ^ResultSet result-set]
+    (fetch-single-row {:on-empty r/nil-on-empty} sql-source result-set))
+  ([{:keys [default]
+     :as options}
+    sql-source ^ResultSet result-set]
+    (fetch-single-row (assoc options :on-empty (fn [_ _] default))
+      sql-source result-set)))
+
+
 (defn fetch-single-value
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value."
   ([sql-source ^ResultSet result-set]
@@ -237,6 +244,20 @@
           (on-multi sql-source result-set column-value)
           column-value))
       (on-empty sql-source result-set))))
+
+
+(defn fetch-optional-value
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value if one exists, nil (or
+  specified default) otherwise.
+  Options:
+    :default (any value) default value to return when no row is found"
+  ([sql-source ^ResultSet result-set]
+    (fetch-single-value {:on-empty r/nil-on-empty} sql-source result-set))
+  ([{:keys [default]
+     :as options}
+    sql-source ^ResultSet result-set]
+    (fetch-single-value (assoc options :on-empty (fn [_ _] default))
+      sql-source result-set)))
 
 
 ;; ----- java.sql.PreparedStatement (connection-worker) stuff -----

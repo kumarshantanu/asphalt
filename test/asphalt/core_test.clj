@@ -145,11 +145,10 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
         vs1 ["Joe Coder" 100000 "Accounts" jd1]
         row (zipmap [:name :salary :dept :joined] vs1)]
     ;; fetch single row in absence of rows
-    (is (= vs1 (a/query (partial a/fetch-single-row (a/default-fetch vs1))
+    (is (= vs1 (a/query (partial a/fetch-optional-row {:default vs1})
                  u/ds t-select [])))
     ;; fetch single column value in absence of rows
-    (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch 1000)
-                                                    :column-index 2))
+    (is (= (a/query (partial a/fetch-optional-value {:default 1000 :column-index 2})
              u/ds t-selfew ["Harry"])
           1000))
     ;; 50 rows
@@ -161,11 +160,11 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
                    u/ds t-select [])]
       (is (= vs1 each)))
     ;; fetch single row in presence of multiple rows
-    (is (= vs1 (a/query (partial a/fetch-single-row (a/default-fetch nil))
+    (is (= vs1 (a/query (partial a/fetch-optional-row {:on-multi r/ignore-multi})
                  u/ds t-select [])))
     ;; fetch single column value in absence of rows
-    (is (= (a/query (partial a/fetch-single-value (assoc (a/default-fetch nil)
-                                                    :column-index 2))
+    (is (= (a/query (partial a/fetch-optional-value {:column-index 2
+                                                     :on-multi r/ignore-multi})
              u/ds t-selfew ["Joe Coder"])
           100000))
     ;; test lay-params

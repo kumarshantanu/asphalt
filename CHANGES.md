@@ -46,9 +46,9 @@
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
   * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
-  * Helper fn `asphalt.core/default-fetch` for default values in single row access
+  * New fetch fns `fetch-optional-row` and `fetch-optional-value` in `asphalt.core` namespace
   * Default fetch fn in `asphalt.core/query` (arity 3) is now `asphalt.core/fetch-rows`
-  * Re-implement `asphalt.core/fetch-maps` with options
+  * Re-implement `asphalt.core/fetch-maps` to use provided row-maker
 
 
 ## 0.4.0 / 2015-November-30

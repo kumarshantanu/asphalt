@@ -127,3 +127,18 @@
   "Convert given string (column) label to keyword after replacing underscores with dashes."
   [^String label]
   (keyword (.replace (.toLowerCase label) \_ \-)))
+
+
+;; ----- helper utility fns for asphalt.core/fetch-single-row/value -----
+
+
+(defn nil-on-empty
+  "Handle asphalt.core/fetch-optional-row/value :on-empty event by returning nil."
+  [_ _]
+  nil)
+
+
+(defn ignore-multi
+  "Handle asphalt.core/fetch-optional-row/value :on-multi event by returning the first value."
+  [_ _ v]
+  v)
