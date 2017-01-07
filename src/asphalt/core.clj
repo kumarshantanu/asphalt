@@ -127,7 +127,8 @@
 
 
 (defn fetch-maps
-  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps. It is required
+  for asphalt.type.ISqlSource/read-row to return a vector of all column values for the sql-source."
   ([sql-source ^ResultSet result-set]
     (fetch-maps {} sql-source result-set))
   ([{:keys [fetch-size
