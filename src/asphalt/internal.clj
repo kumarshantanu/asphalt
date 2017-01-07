@@ -360,20 +360,3 @@
     (onSuccess [this id nanos event]       (on-success id nanos event))
     (onError   [this id nanos event error] (on-error   id nanos event error))
     (lastly    [this id nanos event]       (lastly     id nanos event))))
-
-
-;; ----- fetch defaults -----
-
-
-(defn on-empty-rows
-  [sql-source ^ResultSet result-set]
-  (throw
-    (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL-source: " (pr-str sql-source))
-      {:sql-source sql-source :empty? true})))
-
-
-(defn on-multi-rows
-  [sql-source ^ResultSet result-set value]
-  (throw
-    (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL-source: " (pr-str sql-source))
-      {:sql-source sql-source :multi? true})))

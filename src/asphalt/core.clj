@@ -151,7 +151,11 @@
 
 
 (defn fetch-rows
-  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a vector of rows."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a vector of rows.
+  Options:
+    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
+    :max-rows   (positive integer, default: not applied)         max result rows to read
+    :row-maker  (function arity-3, default: returns row vector)  fn to build row by extracting column values"
   ([sql-source ^ResultSet result-set]
     (fetch-rows {} sql-source result-set))
   ([{:keys [fetch-size
@@ -179,15 +183,20 @@
 
 
 (defn fetch-single-row
-  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row.
+  Options:
+    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
+    :on-empty   (function arity-3, default: throws exception)    fn to handle the :on-empty event
+    :on-multi   (function arity-1, default: throws exception)    fn to handle the :on-multi event
+    :row-maker  (function arity-3, default: returns row vector)  fn to build row by extracting column values"
   ([sql-source ^ResultSet result-set]
     (fetch-single-row {} sql-source result-set))
   ([{:keys [fetch-size
             on-empty
             on-multi
             row-maker]
-     :or {on-empty  i/on-empty-rows
-          on-multi  i/on-multi-rows
+     :or {on-empty  r/throw-on-empty
+          on-multi  r/throw-on-multi
           row-maker t/read-row}
      :as options}
     sql-source ^ResultSet result-set]
@@ -220,7 +229,14 @@
 
 
 (defn fetch-single-value
-  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value."
+  "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value.
+  Options:
+    :column-index  (positive integer, default: 1)                   column index (1 based) to read value from
+    :column-reader (function arity-3, default: returns row vector)  fn to extract column value
+    :fetch-size    (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
+    :on-empty      (function arity-3, default: throws exception)    fn to handle the :on-empty event
+    :on-multi      (function arity-1, default: throws exception)    fn to handle the :on-multi event
+    "
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {} sql-source result-set))
   ([{:keys [column-index
@@ -230,8 +246,8 @@
             on-multi]
      :or {column-index  1
           column-reader t/read-col
-          on-empty      i/on-empty-rows
-          on-multi      i/on-multi-rows}
+          on-empty      r/throw-on-empty
+          on-multi      r/throw-on-multi}
      :as options}
     sql-source ^ResultSet result-set]
     ;; set fetch size on the JDBC driver

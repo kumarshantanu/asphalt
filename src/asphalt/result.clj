@@ -132,6 +132,22 @@
 ;; ----- helper utility fns for asphalt.core/fetch-single-row/value -----
 
 
+(defn throw-on-empty
+  "Handle :on-empty event in fetch fns by throwing exception."
+  [sql-source ^ResultSet result-set]
+  (throw
+    (ex-info (str "Expected exactly one JDBC result row, but found no result row for SQL-source: " (pr-str sql-source))
+      {:sql-source sql-source :empty? true})))
+
+
+(defn throw-on-multi
+  "Handle :on-multi event in fetch fns by throwing exception."
+  [sql-source ^ResultSet result-set value]
+  (throw
+    (ex-info (str "Expected exactly one JDBC result row, but found more than one for SQL-source: " (pr-str sql-source))
+      {:sql-source sql-source :multi? true})))
+
+
 (defn nil-on-empty
   "Handle asphalt.core/fetch-optional-row/value :on-empty event by returning nil."
   [_ _]
