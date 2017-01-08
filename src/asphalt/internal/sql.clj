@@ -248,12 +248,12 @@
 
 
 (defrecord DynamicSqlTemplate
-  [^String sql-name sql-template param-setter row-maker column-reader connection-worker]
+  [^String sql-name sql-tokens param-setter row-maker column-reader connection-worker]
   clojure.lang.Named
   (getNamespace [_] nil)
   (getName      [_] sql-name)
   t/ISqlSource
-  (get-sql    [this params] (make-sql sql-template params))
+  (get-sql    [this params] (make-sql sql-tokens params))
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
   (read-col   [this result-set col-index] (column-reader result-set col-index))
   (read-row   [this result-set col-count] (row-maker result-set col-count))

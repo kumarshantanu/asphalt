@@ -371,7 +371,7 @@
 
 
 (defn build-sql-source
-  [sql-template result-types
+  [sql-tokens result-types
    {:keys [make-params-setter
            make-row-maker
            make-column-reader
@@ -398,7 +398,7 @@
                                                                 query update))
          sql-name               (gensym "sql-name-")}
     :as options}]
-  (i/expected vector? "vector of SQL template tokens" sql-template)
+  (i/expected vector? "vector of SQL template tokens" sql-tokens)
   (i/expected vector? "vector of result column types" result-types)
   (let [sanitized-st (mapv (fn [token]
                              (cond
@@ -410,7 +410,7 @@
                                                     (i/expected-param-type param-type))
                                                   token)
                                :otherwise       (i/expected "string, param key or key/type vector" token)))
-                       sql-template)]
+                       sql-tokens)]
     (let [kt-pairs (filter vector? sanitized-st)]
       (if (->> kt-pairs
            (map second)
