@@ -297,7 +297,12 @@
   ;;============
   java.util.List
   ;;============
-  (get-sql    [this params] (make-sql this params))
-  (set-params [this prepared-stmt params] (p/set-params prepared-stmt params))
+  (get-sql    [this params] (make-sql (first this) params))
+  (set-params [this prepared-stmt params] (if-let [kt-pairs (seq (filter vector? (first this)))]
+                                            (p/set-params prepared-stmt
+                                              (mapv first kt-pairs) (mapv second kt-pairs) params)
+                                            (p/set-params prepared-stmt params)))
   (read-col   [this result-set col-index] (r/read-column-value result-set col-index))
-  (read-row   [this result-set col-count] (r/read-columns result-set col-count)))
+  (read-row   [this result-set col-count] (if-let [ts (seq (second this))]
+                                            (r/read-columns ts result-set col-count)
+                                            (r/read-columns result-set col-count))))
