@@ -144,12 +144,12 @@
             (let [t (first ts)
                   v (get params k)]
               (if-let [single-type (get t/multi-typemap t)]  ; multi-value param?
-                (let [k (count v)]  ; iterate over all values of multi-value param
+                (let [m (count v)]  ; iterate over all values of multi-value param
                   (loop [i 0]
-                    (when (< i k)
+                    (when (< i m)
                       (iparam/set-param-value prepared-stmt single-type (unchecked-add pi i) (get v i))
                       (recur (unchecked-inc i))))
-                  (recur (unchecked-add pi k) (next ks) (next ts)))
+                  (recur (unchecked-add pi m) (next ks) (next ts)))
                 (do
                   (iparam/set-param-value prepared-stmt t pi v)
                   (recur (unchecked-inc pi) (next ks) (next ts)))))
