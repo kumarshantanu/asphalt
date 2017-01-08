@@ -73,22 +73,29 @@
 
 (defn make-columns-reader
   "Given result column types, return a type-aware, efficient columns-reading function."
-  [result-types]
-  (i/expected vector? "vector of result types" result-types)
-  (doseq [t result-types]
-    (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
-  (let [rsyms (-> (count result-types)
-                (repeatedly gensym)
-                vec)
-        rlhs  (mapv vector rsyms result-types)]
-    (eval `(fn row-maker#
-             ([^ResultSet result-set# ^long col-count#]
-               (when-not (= col-count# ~(count result-types))
-                 (i/expected ~(str (count result-types) " columns") col-count#))
-               (letcol [~rlhs result-set#]
-                 ~rsyms))
-             ([sql-source# ^ResultSet result-set# ^long col-count#]
-               (row-maker# result-set# col-count#))))))
+  ([result-types col-args]
+    (i/expected vector? "vector of result types" result-types)
+    (i/expected vector? "vector of column args" col-args)
+    (when-not (= (count result-types) (count col-args))
+      (i/expected (format "length of result-types (%d) and col-args (%d) to be the same"
+                    (count result-types) (count col-args))
+        {:result-types result-types :col-args col-args}))
+    (doseq [t result-types]
+      (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
+    (let [rsyms (-> (count result-types)
+                  (repeatedly gensym)
+                  vec)
+          rlhs  (mapv vector rsyms result-types col-args)]
+      (eval `(fn row-maker#
+               ([^ResultSet result-set# ^long col-count#]
+                 (when-not (= col-count# ~(count result-types))
+                   (i/expected ~(str (count result-types) " columns") col-count#))
+                 (letcol [~rlhs result-set#]
+                   ~rsyms))
+               ([sql-source# ^ResultSet result-set# ^long col-count#]
+                 (row-maker# result-set# col-count#))))))
+  ([result-types]
+    (make-columns-reader result-types (mapv (constantly nil) result-types))))
 
 
 (defn make-column-value-reader
