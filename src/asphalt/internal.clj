@@ -83,7 +83,7 @@
                     (map first))
         more-seq  (map  (fn [x] `(seq ~x)) more-syms)
         more-next (map  (fn [x] `(next ~x)) more-syms)]
-    `(loop [~counter ~init-count
+    `(loop [~counter (long ~init-count)
             ~iteratee (seq ~coll)
             ~@(->> more-pairs
                 (partition 2)
