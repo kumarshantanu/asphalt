@@ -128,14 +128,16 @@
             (aset row i (read-column-value result-set j))
             (recur j))))
       (vec row)))
-  ([column-types ^ResultSet result-set ^long column-count]
+  ([column-types column-args ^ResultSet result-set ^long column-count]
     (let [^objects row (object-array column-count)]
       (loop [i (int 0)]
         (when (< i column-count)
           (let [j (unchecked-inc i)]
-            (aset row i (read-column-value (get column-types i) result-set j))
+            (aset row i (read-column-value (get column-types i) (get column-args i) result-set j))
             (recur j))))
-      (vec row))))
+      (vec row)))
+  ([column-types ^ResultSet result-set ^long column-count]
+    (read-columns column-types nil result-set column-count)))
 
 
 ;; ----- helper utility fns for asphalt.core/fetch-maps -----

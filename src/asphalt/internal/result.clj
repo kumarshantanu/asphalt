@@ -16,6 +16,12 @@
     [java.sql Blob Clob ResultSet ResultSetMetaData]))
 
 
+(defn tz-cal
+  ^java.util.Calendar
+  [^String x]
+  (Calendar/getInstance (TimeZone/getTimeZone x)))
+
+
 (defn read-column-value
   ([^ResultSet result-set ^long column-index]
     (let [data (.getObject result-set column-index)]
@@ -35,13 +41,19 @@
                                   (and (instance? java.sql.Date data)
                                     (= "java.sql.Timestamp" mdcn))    (.getTimestamp result-set column-index)
                                   :otherwise                          data)))))
-  ([column-type ^ResultSet result-set ^long column-index]
+  ([column-type column-arg ^ResultSet result-set ^long column-index]
     (case (get t/single-typemap column-type)
       :nil        (read-column-value result-set column-index)
       :boolean    (.getBoolean   result-set column-index)
       :byte       (.getByte      result-set column-index)
       :byte-array (.getBytes     result-set column-index)
-      :date       (.getDate      result-set column-index)
+      :date       (cond
+                    (nil? column-arg)     (.getDate result-set column-index)
+                    (instance? Calendar
+                      column-arg)         (.getDate result-set column-index ^Calendar column-arg)
+                    (string? column-arg)  (.getDate result-set column-index (tz-cal column-arg))
+                    (i/named? column-arg) (.getDate result-set column-index (tz-cal (i/as-str column-arg)))
+                    :otherwise            (i/expected "nil, timezone keyword/string, java.util.Calendar" column-arg))
       :double     (.getDouble    result-set column-index)
       :float      (.getFloat     result-set column-index)
       :int        (.getInt       result-set column-index)
@@ -49,18 +61,26 @@
       :nstring    (.getNString   result-set column-index)
       :object     (.getObject    result-set column-index)
       :string     (.getString    result-set column-index)
-      :time       (.getTime      result-set column-index)
-      :timestamp  (.getTimestamp result-set column-index)
-      (i/expected-result-type column-type))))
+      :time       (cond
+                    (nil? column-arg)     (.getTime result-set column-index)
+                    (instance? Calendar
+                      column-arg)         (.getTime result-set column-index ^Calendar column-arg)
+                    (string? column-arg)  (.getTime result-set column-index (tz-cal column-arg))
+                    (i/named? column-arg) (.getTime result-set column-index (tz-cal (i/as-str column-arg)))
+                    :otherwise            (i/expected "nil, timezone keyword/string, java.util.Calendar" column-arg))
+      :timestamp  (cond
+                    (nil? column-arg)     (.getTimestamp result-set column-index)
+                    (instance? Calendar
+                      column-arg)         (.getTimestamp result-set column-index ^Calendar column-arg)
+                    (string? column-arg)  (.getTimestamp result-set column-index (tz-cal column-arg))
+                    (i/named? column-arg) (.getTimestamp result-set column-index (tz-cal (i/as-str column-arg)))
+                    :otherwise            (i/expected "nil, timezone keyword/string, java.util.Calendar" column-arg))
+      (i/expected-result-type column-type)))
+  ([column-type ^ResultSet result-set ^long column-index]
+    (read-column-value column-type nil result-set column-index)))
 
 
 ;; ----- read ResultSet columns with type information -----
-
-
-(defn tz-cal
-  ^java.util.Calendar
-  [^String x]
-  (Calendar/getInstance (TimeZone/getTimeZone x)))
 
 
 (defn read-column-expr
