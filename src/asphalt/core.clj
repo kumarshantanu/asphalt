@@ -383,7 +383,7 @@
                                                  (r/make-columns-reader result-types)
                                                  r/read-columns))
          make-column-reader (fn [result-types] (if (seq result-types)
-                                                 (r/make-value-reader (first result-types) 1 nil)
+                                                 (r/make-column-value-reader (first result-types) 1 nil)
                                                  (fn [^ResultSet result-set] (r/read-column-value result-set 1))))
          make-conn-worker   (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
                                                                                        str/trim

@@ -91,7 +91,7 @@
                (row-maker# result-set# col-count#))))))
 
 
-(defn make-value-reader
+(defn make-column-value-reader
   "Given result column type and column index, return a type-aware, efficient value-reading function."
   ([result-type ^long column-index col-arg]
     (when-not (contains? t/single-typemap result-type) (i/expected-result-type result-type))
@@ -103,7 +103,7 @@
                ([sql-source# ~rs-sym]
                  (col-reader# ~rs-sym))))))
   ([result-types ^long column-index]
-    (make-value-reader result-types column-index nil)))
+    (make-column-value-reader result-types column-index nil)))
 
 
 ;; ----- read java.sql.ResultSet columns at runtime -----
