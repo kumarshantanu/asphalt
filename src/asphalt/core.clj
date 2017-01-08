@@ -374,22 +374,22 @@
    {:keys [make-params-setter
            make-row-maker
            make-column-reader
-           make-connection-worker
+           make-conn-worker
            sql-name]
-    :or {make-params-setter     (fn [param-keys param-types] (if (seq param-keys)
-                                                               (p/make-params-layer param-keys param-types)
-                                                               p/set-params))
-         make-row-maker         (fn [result-types] (if (seq result-types)
-                                                     (r/make-columns-reader result-types)
-                                                     r/read-columns))
-         make-column-reader     (fn [result-types] (if (seq result-types)
-                                                     (r/make-value-reader (first result-types) 1 nil)
-                                                     (fn [^ResultSet result-set] (r/read-column-value result-set 1))))
-         make-connection-worker (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
-                                                                                           str/trim
-                                                                                           str/lower-case
-                                                                                           (.startsWith "select")))
-                                                                query update))
+    :or {make-params-setter (fn [param-keys param-types] (if (seq param-keys)
+                                                           (p/make-params-layer param-keys param-types)
+                                                           p/set-params))
+         make-row-maker     (fn [result-types] (if (seq result-types)
+                                                 (r/make-columns-reader result-types)
+                                                 r/read-columns))
+         make-column-reader (fn [result-types] (if (seq result-types)
+                                                 (r/make-value-reader (first result-types) 1 nil)
+                                                 (fn [^ResultSet result-set] (r/read-column-value result-set 1))))
+         make-conn-worker   (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
+                                                                                       str/trim
+                                                                                       str/lower-case
+                                                                                       (.startsWith "select")))
+                                                            query update))
          sql-name               (gensym "sql-name-")}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-tokens)
@@ -415,7 +415,7 @@
          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types)
-         (make-connection-worker sanitized-st result-types))
+         (make-conn-worker sanitized-st result-types))
        (isql/->DynamicSqlTemplate
          sql-name
          (reduce (fn [st token] (cond
@@ -428,7 +428,7 @@
          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types)
-         (make-connection-worker sanitized-st result-types))))))
+         (make-conn-worker sanitized-st result-types))))))
 
 
 (defmacro defsql

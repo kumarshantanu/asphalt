@@ -54,7 +54,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 (a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?")
 
 (a/defsql t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?"
-  {:make-connection-worker (constantly (partial a/query a/fetch-single-row))})
+  {:make-conn-worker (constantly (partial a/query a/fetch-single-row))})
 
 (a/defsql t-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
 
