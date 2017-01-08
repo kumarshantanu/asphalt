@@ -40,20 +40,22 @@
                                    (return-connection connection-source conn))))
 
 
-(def base-col-types #{:nil
-                      :boolean
-                      :byte
-                      :byte-array
-                      :date
-                      :double
-                      :float
-                      :integer
-                      :long
-                      :nstring
-                      :object
-                      :string
-                      :time
-                      :timestamp})
+;; Supported SQL types (aliases not included)
+;
+; :nil
+; :boolean
+; :byte
+; :byte-array
+; :date
+; :double
+; :float
+; :int
+; :long
+; :nstring
+; :object
+; :string
+; :time
+; :timestamp
 
 
 (def single-typemap {nil         :nil      ; alias for :nil
@@ -65,8 +67,8 @@
                      :date       :date
                      :double     :double
                      :float      :float
-                     :int        :integer  ; alias for :integer
-                     :integer    :integer
+                     :int        :int
+                     :integer    :int      ; alias for :int
                      :long       :long
                      :nstring    :nstring
                      :object     :object
@@ -82,8 +84,8 @@
                     :dates       :date
                     :doubles     :double
                     :floats      :float
-                    :ints        :integer  ; alias for :integers
-                    :integers    :integer
+                    :ints        :int
+                    :integers    :int      ; alias for :ints
                     :longs       :long
                     :nstrings    :nstring
                     :objects     :object

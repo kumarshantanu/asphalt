@@ -44,7 +44,7 @@
       :date       (.getDate      result-set column-index)
       :double     (.getDouble    result-set column-index)
       :float      (.getFloat     result-set column-index)
-      :integer    (.getInt       result-set column-index)
+      :int        (.getInt       result-set column-index)
       :long       (.getLong      result-set column-index)
       :nstring    (.getNString   result-set column-index)
       :object     (.getObject    result-set column-index)
@@ -81,7 +81,7 @@
                   :otherwise         `(.getDate ~result-set-sym ~col-ref ~col-arg))
     :double     `(.getDouble    ~result-set-sym ~col-ref)
     :float      `(.getFloat     ~result-set-sym ~col-ref)
-    :integer    `(.getInt       ~result-set-sym ~col-ref)
+    :int        `(.getInt       ~result-set-sym ~col-ref)
     :long       `(.getLong      ~result-set-sym ~col-ref)
     :nstring    `(.getNString   ~result-set-sym ~col-ref)
     :object     (if (nil? col-arg)
@@ -120,7 +120,7 @@
          :date       [assoc  :tag "java.sql.Date"]
          :double     [dissoc :tag]
          :float      [dissoc :tag]
-         :integer    [dissoc :tag]
+         :int        [dissoc :tag]
          :long       [dissoc :tag]
          :nstring    [assoc  :tag "java.lang.String"]
          :object     [assoc  :tag "lava.lang.Object"]
