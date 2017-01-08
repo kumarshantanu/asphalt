@@ -60,7 +60,7 @@
                                         `(count (get ~params-sym ~(get param-keys-vec idx)))))
                          param-types-vec)]
       `(reduce (fn [cv# ^long pcount#]
-                 (conj cv# (unchecked-add (last cv#) pcount#)))
+                 (conj cv# (unchecked-add (int (last cv#)) pcount#)))
          (vector-of :int 1)
          [~@multi-counts]))))
 
