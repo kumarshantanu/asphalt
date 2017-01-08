@@ -74,19 +74,36 @@
 (defn make-columns-reader
   "Given result column types, return a type-aware, efficient columns-reading function."
   [result-types]
-  (do
-    (i/expected vector? "vector of result types" result-types)
-    (doseq [t result-types]
-      (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
-    (let [rsyms (-> (count result-types)
-                  (repeatedly gensym)
-                  vec)
-          rlhs  (mapv vector rsyms result-types)]
-      (eval `(fn [^ResultSet result-set# ^long col-count#]
+  (i/expected vector? "vector of result types" result-types)
+  (doseq [t result-types]
+    (when-not (contains? t/single-typemap t) (i/expected-result-type t)))
+  (let [rsyms (-> (count result-types)
+                (repeatedly gensym)
+                vec)
+        rlhs  (mapv vector rsyms result-types)]
+    (eval `(fn row-maker#
+             ([^ResultSet result-set# ^long col-count#]
                (when-not (= col-count# ~(count result-types))
                  (i/expected ~(str (count result-types) " columns") col-count#))
                (letcol [~rlhs result-set#]
-                 ~rsyms))))))
+                 ~rsyms))
+             ([sql-source# ^ResultSet result-set# ^long col-count#]
+               (row-maker# result-set# col-count#))))))
+
+
+(defn make-value-reader
+  "Given result column type and column index, return a type-aware, efficient value-reading function."
+  ([result-type ^long column-index col-arg]
+    (when-not (contains? t/single-typemap result-type) (i/expected-result-type result-type))
+    (i/expected (every-pred pos? integer?) "positive integer" column-index)
+    (let [rs-sym (with-meta (gensym "result-set-") {:tag "java.sql.ResultSet"})]
+      (eval `(fn col-reader#
+               ([~rs-sym]
+                 ~(iresult/read-column-expr result-type rs-sym column-index col-arg))
+               ([sql-source# ~rs-sym]
+                 (col-reader# ~rs-sym))))))
+  ([result-types ^long column-index]
+    (make-value-reader result-types column-index nil)))
 
 
 ;; ----- read java.sql.ResultSet columns at runtime -----

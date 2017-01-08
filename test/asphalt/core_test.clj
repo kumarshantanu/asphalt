@@ -42,7 +42,7 @@
 ;; ----- templates -----
 
 
-(a/defsql t-count  "SELECT COUNT(*) FROM emp")
+(a/defsql t-count  "SELECT ^int COUNT(*) FROM emp")
 
 (a/defsql t-insert "INSERT INTO emp (name, salary, dept, j_date)
 VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
@@ -163,7 +163,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
     (is (= vs1 (a/query (partial a/fetch-optional-row {:on-multi r/ignore-multi})
                  u/ds t-select [])))
     ;; fetch single column value in absence of rows
-    (is (= (a/query (partial a/fetch-optional-value {:column-index 2
+    (is (= (a/query (partial a/fetch-optional-value {:column-reader (r/make-value-reader :int 2)
                                                      :on-multi r/ignore-multi})
              u/ds t-selfew ["Joe Coder"])
           100000))

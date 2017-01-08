@@ -21,8 +21,8 @@
 (defprotocol ISqlSource
   (get-sql    [this params] "Return SQL string to be executed")
   (set-params [this ^PreparedStatement prepared-stmt params] "Set prepared-statement params")
-  (read-col   [this ^ResultSet result-set ^long column-index] "Read column at specified index (1 based) from result-set")
-  (read-row   [this ^ResultSet result-set ^long column-count] "Read specified number of columns (starting at 1) as a row"))
+  (read-col   [this ^ResultSet result-set] "Read value column (column index is unspecified) from result-set")
+  (read-row   [this ^ResultSet result-set ^long column-count] "Read given number of columns (starting at 1) as a row"))
 
 
 (defprotocol ITransactionPropagation

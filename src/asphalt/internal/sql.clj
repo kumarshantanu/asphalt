@@ -216,7 +216,7 @@
   t/ISqlSource
   (get-sql    [this params] sql)
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
-  (read-col   [this result-set col-index] (column-reader result-set col-index))
+  (read-col   [this result-set] (column-reader result-set))
   (read-row   [this result-set col-count] (row-maker result-set col-count))
   clojure.lang.IFn
   (applyTo    [this args] (let [n (count args)]
@@ -255,7 +255,7 @@
   t/ISqlSource
   (get-sql    [this params] (make-sql sql-tokens params))
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
-  (read-col   [this result-set col-index] (column-reader result-set col-index))
+  (read-col   [this result-set] (column-reader result-set))
   (read-row   [this result-set col-count] (row-maker result-set col-count))
   clojure.lang.IFn
   (applyTo    [this args] (let [n (count args)]
@@ -292,7 +292,7 @@
   ;;==============
   (get-sql    [sql params] sql)
   (set-params [sql prepared-stmt params] (p/set-params prepared-stmt params))
-  (read-col   [sql result-set column-index] (r/read-column-value result-set column-index))
+  (read-col   [sql result-set] (r/read-column-value result-set 1))
   (read-row   [sql result-set column-count] (r/read-columns result-set column-count))
   ;;============
   java.util.List
@@ -302,7 +302,7 @@
                                             (p/set-params prepared-stmt
                                               (mapv first kt-pairs) (mapv second kt-pairs) params)
                                             (p/set-params prepared-stmt params)))
-  (read-col   [this result-set col-index] (r/read-column-value result-set col-index))
+  (read-col   [this result-set] (r/read-column-value result-set 1))
   (read-row   [this result-set col-count] (if-let [ts (seq (second this))]
                                             (r/read-columns ts result-set col-count)
                                             (r/read-columns result-set col-count))))

@@ -20,13 +20,14 @@
     * Param setter  : auto-default to use param types when specified
     * Row maker     : auto-default to use result types when specified
     * Column reader : default is used
-    * Connection worker : default to `query` vs `update` based on first SQL token
+    * Connection worker : auto-default to `query` vs `update` based on first SQL token
   * Behave as function `(f connection-source params)` using associated connection-worker
 * Transactions
   * Do not override the exception causing rollback/commit by the exception in rollback/commit
 * Types/Protocols
   * [BREAKING CHANGE] Now `asphalt.type.ISqlSource/get-sql` accepts params as argument (for dynamic SQL)
   * [BREAKING CHANGE] Drop support for map SQL templates
+  * [BREAKING CHANGE] Now `asphalt.type.ISqlSource/read-col` no more accepts column-index argument
 * Params setter utility in `asphalt.param` namespace
   * Macro `lay-params` (available at macro-expansion time, efficient)
   * Function `set-params` (available at run time, flexible)
@@ -45,6 +46,7 @@
   * Column key maker fns for `asphalt.core/fetch-maps`
 * Queries
   * [BREAKING CHANGE] Accept options in `asphalt.core` fetch fns (arity 3)
+  * [BREAKING CHANGE] Remove `:column-index` option from `fetch-value`
   * [BREAKING CHANGE] Drop `asphalt.core/defquery` in favor of `asphalt.core/defsql` behaving as function
   * New fetch fns `fetch-optional-row` and `fetch-optional-value` in `asphalt.core` namespace
   * Default fetch fn in `asphalt.core/query` (arity 3) is now `asphalt.core/fetch-rows`

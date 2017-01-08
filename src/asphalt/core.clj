@@ -218,7 +218,8 @@
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row if one exists, nil (or specified
   default) otherwise.
   Options:
-    :default (any value) default value to return when no row is found"
+    :default (any value) default value to return when no row is found
+    (see `fetch-single-row` for other options)"
   ([sql-source ^ResultSet result-set]
     (fetch-single-row {:on-empty r/nil-on-empty} sql-source result-set))
   ([{:keys [default]
@@ -231,21 +232,18 @@
 (defn fetch-single-value
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value.
   Options:
-    :column-index  (positive integer, default: 1)                   column index (1 based) to read value from
-    :column-reader (function arity-3, default: returns row vector)  fn to extract column value
+    :column-reader (function arity-2, default: returns row vector)  fn to extract column value
     :fetch-size    (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
     :on-empty      (function arity-3, default: throws exception)    fn to handle the :on-empty event
     :on-multi      (function arity-1, default: throws exception)    fn to handle the :on-multi event
     "
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {} sql-source result-set))
-  ([{:keys [column-index
-            column-reader
+  ([{:keys [column-reader
             fetch-size
             on-empty
             on-multi]
-     :or {column-index  1
-          column-reader t/read-col
+     :or {column-reader t/read-col
           on-empty      r/throw-on-empty
           on-multi      r/throw-on-multi}
      :as options}
@@ -255,7 +253,7 @@
       (.setFetchSize result-set (int fetch-size)))
     ;; fetch rows
     (if (.next result-set)
-      (let [column-value (column-reader sql-source result-set (int column-index))]
+      (let [column-value (column-reader sql-source result-set)]
         (if (.next result-set)
           (on-multi sql-source result-set column-value)
           column-value))
@@ -266,7 +264,8 @@
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value if one exists, nil (or
   specified default) otherwise.
   Options:
-    :default (any value) default value to return when no row is found"
+    :default (any value) default value to return when no row is found
+    (see `fetch-single-value` for other supported options)"
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {:on-empty r/nil-on-empty} sql-source result-set))
   ([{:keys [default]
@@ -384,13 +383,8 @@
                                                      (r/make-columns-reader result-types)
                                                      r/read-columns))
          make-column-reader     (fn [result-types] (if (seq result-types)
-                                                     (let [n (count result-types)
-                                                           s (str "integer from 1 to " n)]
-                                                       (fn [^ResultSet result-set ^long col-index]
-                                                         (when-not (<= 1 col-index n)
-                                                           (i/expected s col-index))
-                                                         (r/read-column-value result-set col-index)))
-                                                     r/read-column-value))
+                                                     (r/make-value-reader (first result-types) 1 nil)
+                                                     (fn [^ResultSet result-set] (r/read-column-value result-set 1))))
          make-connection-worker (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
                                                                                            str/trim
                                                                                            str/lower-case
