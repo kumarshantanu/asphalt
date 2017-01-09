@@ -58,25 +58,19 @@
                   (count param-types) (count param-keys)) {:param-types param-types
                                                            :param-keys  param-keys}))
   (let [prepared-stmt-sym (with-meta (gensym "prepared-stmt-") {:tag "java.sql.PreparedStatement"})
-        params-sym   (gensym "sql-params-")
-        mparam-count (count (distinct param-keys))
-        vparam-count (count param-keys)
-        indices-sym  (gensym "param-indices-")
-        indices-exp  (iparam/params-indices param-keys param-types params-sym)]
+        params-sym  (gensym "sql-params-")
+        indices-sym (gensym "param-indices-")
+        indices-exp (iparam/params-indices param-keys param-types params-sym)]
     `(let [~params-sym ~params
            ~@(when-not (vector? indices-exp)  ; indices-exp is a vector for single params, S-expr otherwise
                [indices-sym indices-exp])]
        (let [~prepared-stmt-sym ~prepared-stmt]
          ~(if (= param-keys (vec (range (count param-keys))))  ; is it vector params?
-            `(if (<= ~vparam-count (count ~params-sym))
-               (when (< (count ~params-sym) ~(count param-keys)) ; short circuit for vector params
-                 (i/expected (str ~(count param-keys) " or more params") ~params-sym))
-               (i/expected ~(str vparam-count " params") ~params-sym))
-            `(if (<= ~mparam-count (count ~params-sym))
-               (doseq [each-key# ~param-keys]
-                 (when-not (contains? ~params-sym each-key#)
-                   (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym)))
-               (i/expected ~(str mparam-count " params") ~params-sym)))
+            `(when (< (count ~params-sym) ~(count param-keys)) ; short circuit for vector params
+               (i/expected (str ~(count param-keys) " or more params") ~params-sym))
+            `(doseq [each-key# ~param-keys]
+               (when-not (contains? ~params-sym each-key#)
+                 (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym))))
          ~@(->> (map vector param-types param-keys)
              (map-indexed (fn [^long idx [t k]]
                             (iparam/lay-param-expr prepared-stmt-sym t
