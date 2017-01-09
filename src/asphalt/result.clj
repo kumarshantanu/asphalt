@@ -116,10 +116,18 @@
 ;; ----- read java.sql.ResultSet columns at runtime -----
 
 
-(def read-column-value iresult/read-column-value)
+(defn read-column-value
+  "Read column value from java.sql.ResultSet at the specified column index and return it."
+  ([^ResultSet result-set ^long column-index]
+    (iresult/read-column-value result-set column-index))
+  ([column-type column-arg ^ResultSet result-set ^long column-index]
+    (iresult/read-column-value column-type column-arg result-set column-index))
+  ([column-type ^ResultSet result-set ^long column-index]
+    (iresult/read-column-value column-type nil result-set column-index)))
 
 
 (defn read-columns
+  "Read the column values from given java.sql.ResultSet and return as a vector."
   ([^ResultSet result-set ^long column-count]
     (let [^objects row (object-array column-count)]
       (loop [i (int 0)]

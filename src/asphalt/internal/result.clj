@@ -60,11 +60,11 @@
       :long       (.getLong      result-set column-index)
       :nstring    (.getNString   result-set column-index)
       :object     (cond
-                    (nil? column-arg)   (.getObject result-set column-index)
-                    (class? column-arg) (.getObject result-set column-index ^Class column-arg)
+                    (nil? column-arg)     (.getObject result-set column-index)
+                    (class? column-arg)   (.getObject result-set column-index ^Class column-arg)
                     (instance? Map
-                      column-arg)       (.getObject result-set column-index ^Map column-arg)
-                    :otherwise          (i/expected "nil, class or map" column-arg))
+                      column-arg)         (.getObject result-set column-index ^Map column-arg)
+                    :otherwise            (i/expected "nil, class or map" column-arg))
       :string     (.getString    result-set column-index)
       :time       (cond
                     (nil? column-arg)     (.getTime result-set column-index)
@@ -80,9 +80,7 @@
                     (string? column-arg)  (.getTimestamp result-set column-index (tz-cal column-arg))
                     (i/named? column-arg) (.getTimestamp result-set column-index (tz-cal (i/as-str column-arg)))
                     :otherwise            (i/expected "nil, timezone keyword/string or java.util.Calendar" column-arg))
-      (i/expected-result-type column-type)))
-  ([column-type ^ResultSet result-set ^long column-index]
-    (read-column-value column-type nil result-set column-index)))
+      (i/expected-result-type column-type))))
 
 
 ;; ----- read ResultSet columns with type information -----
