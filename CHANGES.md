@@ -19,7 +19,7 @@
   * Configurable associations
     * Param setter  : auto-default to use param types when specified
     * Row maker     : auto-default to use result types when specified
-    * Column reader : default is used
+    * Column reader : auto-default to read first column using result type when specified
     * Connection worker : auto-default to `query` vs `update` based on first SQL token
   * Behave as function `(f connection-source params)` using associated connection-worker
 * Transactions
