@@ -68,6 +68,9 @@
 ;; ----- param setting helpers -----
 
 
+(def ^:const ba-type (Class/forName "[B"))  ;; byte-array class
+
+
 (defn set-param-value
   [^PreparedStatement prepared-statement param-type ^long param-index param-value]
   (case (get t/single-typemap param-type)
@@ -76,7 +79,10 @@
                   (.setObject prepared-statement param-index ^Object param-value))
     :boolean    (.setBoolean   prepared-statement param-index (boolean    param-value))
     :byte       (.setByte      prepared-statement param-index (byte       param-value))
-    :byte-array (.setBytes     prepared-statement param-index (byte-array param-value))
+    :byte-array (.setBytes     prepared-statement param-index (cond
+                                                                (= (type param-value) ba-type) param-value
+                                                                (nil? param-value) nil
+                                                                :else (byte-array param-value)))
     :date       (if (instance? Calendar param-value)
                   (.setDate    prepared-statement param-index (Date. (.getTimeInMillis ^Calendar param-value))
                     ^Calendar param-value)
@@ -102,6 +108,17 @@
 ;; ----- param laying helpers -----
 
 
+(defmacro verify
+  [klass instance]
+  (i/expected symbol? "a class symbol" klass)
+  (let [sym (with-meta (gensym) {:tag (str klass)})]
+    `(let [~sym ~instance]
+       (cond
+         (instance? ~klass ~sym) ~sym
+         (nil? ~sym)             nil
+         :else (i/expected ~(str "nil or instance of class " klass) ~sym)))))
+
+
 (defmacro try-param
   [pindex-sym type-label param-expr]
   `(try ~param-expr
@@ -110,13 +127,6 @@
                 (str "Error resolving SQL param " ~pindex-sym
                   ~(format " as %s: %s" type-label param-expr))
                 e#)))))
-
-
-(defmacro each-param-expr
-  "Return param setter expression."
-  [setter pstmt-sym pindex-sym type-label param-expr]
-  `(~setter ~pstmt-sym ~pindex-sym
-     (try-param ~pindex-sym ~type-label ~param-expr)))
 
 
 (defn lay-param-expr
@@ -132,9 +142,13 @@
          ~(lay-param-expr pstmt-sym (get t/multi-typemap param-type) i-sym v-sym)))
     (case (get t/single-typemap param-type)
       :nil        `(set-param-value ~pstmt-sym :nil ~pindex-sym ~pvalue-sym)
-      :boolean    `(each-param-expr ~'.setBoolean   ~pstmt-sym ~pindex-sym "boolean"    (boolean    ~pvalue-sym))
-      :byte       `(each-param-expr ~'.setByte      ~pstmt-sym ~pindex-sym "byte"       (byte       ~pvalue-sym))
-      :byte-array `(each-param-expr ~'.setBytes     ~pstmt-sym ~pindex-sym "byte-array" (byte-array ~pvalue-sym))
+      :boolean    `(.setBoolean ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "boolean"    (boolean ~pvalue-sym)))
+      :byte       `(.setByte    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "byte"       (byte    ~pvalue-sym)))
+      :byte-array `(.setBytes   ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "byte-array" (let [v# ~pvalue-sym]
+                                                                                             (cond
+                                                                                               (= (type v#) ba-type) v#
+                                                                                               (nil? v#)             nil
+                                                                                               :else (byte-array v#)))))
       :date       `(let [p# (try-param ~pindex-sym "date" ~pvalue-sym)]
                      (cond
                        (instance? Date p#) (.setDate ~pstmt-sym ~pindex-sym ^java.sql.Date p#)
@@ -144,13 +158,15 @@
                                                  ^java.util.Calendar p#)
                        (nil? p#)    (.setDate ~pstmt-sym ~pindex-sym nil)
                        :otherwise   (i/expected "java.sql.Date or java.util.Calendar instance" p#)))
-      :double     `(each-param-expr ~'.setDouble    ~pstmt-sym ~pindex-sym "double"     (double     ~pvalue-sym))
-      :float      `(each-param-expr ~'.setFloat     ~pstmt-sym ~pindex-sym "float"      (float      ~pvalue-sym))
-      :int        `(each-param-expr ~'.setInt       ~pstmt-sym ~pindex-sym "int"        (int        ~pvalue-sym))
-      :long       `(each-param-expr ~'.setLong      ~pstmt-sym ~pindex-sym "long"       (long       ~pvalue-sym))
-      :nstring    `(each-param-expr ~'.setNString   ~pstmt-sym ~pindex-sym "string"     ~pvalue-sym)
-      :object     `(each-param-expr ~'.setObject    ~pstmt-sym ~pindex-sym "object"     ~pvalue-sym)
-      :string     `(each-param-expr ~'.setString    ~pstmt-sym ~pindex-sym "string"     ~pvalue-sym)
+      :double     `(.setDouble    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "double"   (double     ~pvalue-sym)))
+      :float      `(.setFloat     ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "float"    (float      ~pvalue-sym)))
+      :int        `(.setInt       ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "int"      (int        ~pvalue-sym)))
+      :long       `(.setLong      ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "long"     (long       ~pvalue-sym)))
+      :nstring    `(.setNString   ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "string"   (verify java.lang.String
+                                                                                             ~pvalue-sym)))
+      :object     `(.setObject    ~pstmt-sym ~pindex-sym ~pvalue-sym)
+      :string     `(.setString    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "string"   (verify java.lang.String
+                                                                                             ~pvalue-sym)))
       :time       `(let [p# (try-param ~pindex-sym "time" ~pvalue-sym)]
                      (cond
                        (instance? Date p#) (.setTime ~pstmt-sym ~pindex-sym ^java.sql.Time p#)
