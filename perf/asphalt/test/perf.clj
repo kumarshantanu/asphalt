@@ -14,11 +14,16 @@
     [citius.core       :as c]
     [asphalt.test-util :as u]
     [asphalt.core      :as a]
+    [asphalt.param     :as p]
+    [asphalt.result    :as r]
     [asphalt.internal  :as i]
     [asphalt.type      :as t]))
 
 
-(use-fixtures :once (c/make-bench-wrapper ["clojure.java.jdbc" "Asphalt-SQL" "Asphalt-template"]
+(use-fixtures :once (c/make-bench-wrapper ["clojure.java.jdbc"
+                                           "Asphalt-SQL"
+                                           "Asphalt-template-unrolled"
+                                           "Asphalt-template-runtime"]
                       {:chart-title "Clojure.java.jdbc vs Asphalt"
                        :chart-filename (format "bench-clj-%s.png" c/clojure-version-str)}))
 
@@ -46,6 +51,20 @@
 (a/defsql t-delete "DELETE FROM emp")
 (a/defsql t-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
 
+
+(def r-insert (assoc t-insert
+                :param-setter (fn [prepared-stmt params]
+                                (p/set-params prepared-stmt [:name :salary :dept] [:string :int :string] params))))
+(def r-delete (assoc t-delete
+                :param-setter (fn [prepared-stmt params]
+                                (p/set-params prepared-stmt [] [] params))))
+(def r-select (assoc t-select
+                :param-setter (fn [prepared-stmt params]
+                                (p/set-params prepared-stmt [] [] params))
+                :row-maker    (fn [result-set params]
+                                (r/read-columns [:string :int :string] nil result-set params))))
+
+
 (def ^String s-insert (:sql t-insert))
 (def ^String s-delete (:sql t-delete))
 (def ^String s-select (:sql t-select))
@@ -68,7 +87,10 @@
              (a/update conn s-delete nil))
            (do
              (a/update conn t-insert data)
-             (a/update conn t-delete nil))))))))
+             (a/update conn t-delete nil))
+           (do
+             (a/update conn r-insert data)
+             (a/update conn r-delete nil))))))))
 
 
 (deftest bench-select
@@ -84,11 +106,13 @@
           (c/compare-perf "select-row"
             (jdbc/query db-con [s-select])
             (a/query a/fetch-rows conn s-select nil)
-            (a/query a/fetch-rows conn t-select nil))))
+            (a/query a/fetch-rows conn t-select nil)
+            (a/query a/fetch-rows conn r-select nil))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (i/with-connection [conn u/orig-ds]
           (c/compare-perf "select-row-as-arrays"
             (jdbc/query db-con [s-select] {:as-arrays? true})
             (a/query a/fetch-rows conn s-select nil)
-            (a/query a/fetch-rows conn t-select nil)))))))
+            (a/query a/fetch-rows conn t-select nil)
+            (a/query a/fetch-rows conn r-select nil)))))))
