@@ -35,7 +35,7 @@
   * Support for param position/name reference (vector/map/nil params)
   * Support for additional coercion arguments
   * Functions to convert date/time/timestamp to `java.util.Calendar` with timezone
-  * [BREAKING CHANGE] Function `set-params-with-query-timeout` moved from `asphalt.core`
+  * [BREAKING CHANGE] Function `set-params-with-query-timeout` moved from `asphalt.core` to `asphalt.param`
 * Result-columns reading utility in `asphalt.result` namespace
   * Efficient row-maker: `asphalt.result/letcol` (macro) with support for
     * Column types
