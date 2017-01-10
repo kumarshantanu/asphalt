@@ -93,8 +93,8 @@
              (a/update conn r-delete nil))))))))
 
 
-(deftest bench-select
-  (testing "Select row"
+(deftest bench-select-one
+  (testing "Select one row"
     (let [data {:name "Joe Coder"
                 :salary 100000
                 :dept "Accounts"}]
@@ -103,15 +103,41 @@
       ;; bench c.j.j normal with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (i/with-connection [conn u/orig-ds]
-          (c/compare-perf "select-row"
-            (jdbc/query db-con [s-select])
-            (a/query a/fetch-rows conn s-select nil)
-            (a/query a/fetch-rows conn t-select nil)
-            (a/query a/fetch-rows conn r-select nil))))
+          (c/compare-perf "select-single-row-as-map"
+            (first (jdbc/query db-con [s-select]))
+            (first (a/query a/fetch-maps conn s-select nil))
+            (first (a/query a/fetch-maps conn t-select nil))
+            (first (a/query a/fetch-maps conn r-select nil)))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
         (i/with-connection [conn u/orig-ds]
-          (c/compare-perf "select-row-as-arrays"
+          (c/compare-perf "select-single-row-as-vector"
+            (first (jdbc/query db-con [s-select] {:as-arrays? true}))
+            (a/query a/fetch-single-row conn s-select nil)
+            (a/query a/fetch-single-row conn t-select nil)
+            (a/query a/fetch-single-row conn r-select nil)))))))
+
+
+(deftest bench-select-many
+  (testing "Select many rows"
+    (let [data {:name "Joe Coder"
+                :salary 100000
+                :dept "Accounts"}]
+      (i/with-connection [conn u/orig-ds]
+        (dotimes [i 100]
+          (a/update conn t-insert data)))
+      ;; bench c.j.j normal with asphalt
+      (jdbc/with-db-connection [db-con db-spec]
+        (i/with-connection [conn u/orig-ds]
+          (c/compare-perf "select-many-rows-as-maps"
+            (jdbc/query db-con [s-select])
+            (a/query a/fetch-maps conn s-select nil)
+            (a/query a/fetch-maps conn t-select nil)
+            (a/query a/fetch-maps conn r-select nil))))
+      ;; bench c.j.j `:as-arrays? true` with asphalt
+      (jdbc/with-db-connection [db-con db-spec]
+        (i/with-connection [conn u/orig-ds]
+          (c/compare-perf "select-many-rows-as-vectors"
             (jdbc/query db-con [s-select] {:as-arrays? true})
             (a/query a/fetch-rows conn s-select nil)
             (a/query a/fetch-rows conn t-select nil)
