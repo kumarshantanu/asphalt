@@ -22,6 +22,7 @@
 
 (use-fixtures :once (c/make-bench-wrapper ["clojure.java.jdbc"
                                            "Asphalt-SQL"
+                                           "Asphalt-template-default"
                                            "Asphalt-template-unrolled"
                                            "Asphalt-template-runtime"]
                       {:chart-title "Clojure.java.jdbc vs Asphalt"
@@ -50,6 +51,15 @@
 (a/defsql t-insert "INSERT INTO emp (name, salary, dept) VALUES (^string $name, ^int $salary, ^string $dept)")
 (a/defsql t-delete "DELETE FROM emp")
 (a/defsql t-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
+
+
+(def u-insert (assoc t-insert
+                :param-setter (p/make-params-layer [:name :salary :dept] [:string :int :string])))
+(def u-delete (assoc t-delete
+                :param-setter (p/make-params-layer [] [])))
+(def u-select (assoc t-select
+                :param-setter (p/make-params-layer [] [])
+                :row-maker    (r/make-columns-reader [:string :int :string])))
 
 
 (def r-insert (assoc t-insert
@@ -89,6 +99,9 @@
              (a/update conn t-insert data)
              (a/update conn t-delete nil))
            (do
+             (a/update conn u-insert data)
+             (a/update conn u-delete nil))
+           (do
              (a/update conn r-insert data)
              (a/update conn r-delete nil))))))))
 
@@ -107,6 +120,7 @@
             (first (jdbc/query db-con [s-select]))
             (first (a/query a/fetch-maps conn s-select nil))
             (first (a/query a/fetch-maps conn t-select nil))
+            (first (a/query a/fetch-maps conn u-select nil))
             (first (a/query a/fetch-maps conn r-select nil)))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
@@ -115,6 +129,7 @@
             (first (jdbc/query db-con [s-select] {:as-arrays? true}))
             (a/query a/fetch-single-row conn s-select nil)
             (a/query a/fetch-single-row conn t-select nil)
+            (a/query a/fetch-single-row conn u-select nil)
             (a/query a/fetch-single-row conn r-select nil)))))))
 
 
@@ -133,6 +148,7 @@
             (jdbc/query db-con [s-select])
             (a/query a/fetch-maps conn s-select nil)
             (a/query a/fetch-maps conn t-select nil)
+            (a/query a/fetch-maps conn u-select nil)
             (a/query a/fetch-maps conn r-select nil))))
       ;; bench c.j.j `:as-arrays? true` with asphalt
       (jdbc/with-db-connection [db-con db-spec]
@@ -141,4 +157,5 @@
             (jdbc/query db-con [s-select] {:as-arrays? true})
             (a/query a/fetch-rows conn s-select nil)
             (a/query a/fetch-rows conn t-select nil)
+            (a/query a/fetch-rows conn u-select nil)
             (a/query a/fetch-rows conn r-select nil)))))))
