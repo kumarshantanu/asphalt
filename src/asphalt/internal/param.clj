@@ -73,50 +73,38 @@
 
 (defn set-param-value
   [^PreparedStatement prepared-statement param-type ^long param-index param-value]
-  (case (get t/single-typemap param-type)
-    :nil        (if (instance? clojure.lang.BigInt param-value)
-                  (.setLong   prepared-statement param-index ^long (long param-value))
-                  (.setObject prepared-statement param-index ^Object param-value))
-    :boolean    (.setBoolean   prepared-statement param-index (boolean    param-value))
-    :byte       (.setByte      prepared-statement param-index (byte       param-value))
-    :byte-array (.setBytes     prepared-statement param-index (cond
-                                                                (= (type param-value) ba-type) param-value
-                                                                (nil? param-value) nil
-                                                                :else (byte-array param-value)))
-    :date       (if (instance? Calendar param-value)
-                  (.setDate    prepared-statement param-index (Date. (.getTimeInMillis ^Calendar param-value))
-                    ^Calendar param-value)
-                  (.setDate    prepared-statement param-index ^java.sql.Date param-value))
-    :double     (.setDouble    prepared-statement param-index (double     param-value))
-    :float      (.setFloat     prepared-statement param-index (float      param-value))
-    :int        (.setInt       prepared-statement param-index (int        param-value))
-    :long       (.setLong      prepared-statement param-index (long       param-value))
-    :nstring    (.setNString   prepared-statement param-index ^String param-value)
-    :object     (.setObject    prepared-statement param-index ^Object param-value)
-    :string     (.setString    prepared-statement param-index ^String param-value)
-    :time       (if (instance? Calendar param-value)
-                  (.setTime      prepared-statement param-index (Time. (.getTimeInMillis ^Calendar param-value))
-                    ^Calendar param-value)
-                  (.setTime      prepared-statement param-index ^java.sql.Time param-value))
-    :timestamp  (if (instance? Calendar param-value)
-                  (.setTimestamp prepared-statement param-index (Timestamp. (.getTimeInMillis ^Calendar param-value))
-                    ^Calendar param-value)
-                  (.setTimestamp prepared-statement param-index ^java.sql.Timestamp param-value))
-    (i/expected-single-param-type param-type)))
+  (if (nil? param-value)
+    (.setObject prepared-statement param-index nil)  ; param type doesn't matter for nil values
+    (case (get t/single-typemap param-type)
+      :nil        (if (instance? clojure.lang.BigInt param-value)
+                    (.setLong   prepared-statement param-index ^long (long param-value))
+                    (.setObject prepared-statement param-index ^Object param-value))
+      :boolean    (.setBoolean   prepared-statement param-index (boolean    param-value))
+      :byte       (.setByte      prepared-statement param-index (byte       param-value))
+      :byte-array (.setBytes     prepared-statement param-index ^bytes param-value)
+      :date       (if (instance? Calendar param-value)
+                    (.setDate    prepared-statement param-index (Date. (.getTimeInMillis ^Calendar param-value))
+                      ^Calendar param-value)
+                    (.setDate    prepared-statement param-index ^java.sql.Date param-value))
+      :double     (.setDouble    prepared-statement param-index (double     param-value))
+      :float      (.setFloat     prepared-statement param-index (float      param-value))
+      :int        (.setInt       prepared-statement param-index (int        param-value))
+      :long       (.setLong      prepared-statement param-index (long       param-value))
+      :nstring    (.setNString   prepared-statement param-index ^String param-value)
+      :object     (.setObject    prepared-statement param-index ^Object param-value)
+      :string     (.setString    prepared-statement param-index ^String param-value)
+      :time       (if (instance? Calendar param-value)
+                    (.setTime      prepared-statement param-index (Time. (.getTimeInMillis ^Calendar param-value))
+                      ^Calendar param-value)
+                    (.setTime      prepared-statement param-index ^java.sql.Time param-value))
+      :timestamp  (if (instance? Calendar param-value)
+                    (.setTimestamp prepared-statement param-index (Timestamp. (.getTimeInMillis ^Calendar param-value))
+                      ^Calendar param-value)
+                    (.setTimestamp prepared-statement param-index ^java.sql.Timestamp param-value))
+      (i/expected-single-param-type param-type))))
 
 
 ;; ----- param laying helpers -----
-
-
-(defmacro verify
-  [klass instance]
-  (i/expected symbol? "a class symbol" klass)
-  (let [sym (with-meta (gensym) {:tag (str klass)})]
-    `(let [~sym ~instance]
-       (cond
-         (instance? ~klass ~sym) ~sym
-         (nil? ~sym)             nil
-         :else (i/expected ~(str "nil or instance of class " klass) ~sym)))))
 
 
 (defmacro try-param
@@ -129,61 +117,73 @@
                 e#)))))
 
 
+(defmacro try-set
+  [prepared-stmt pindex-sym type-label pvalue-expr pvalue-sym & body]
+  `(let [~pvalue-sym (try-param ~pindex-sym ~type-label ~pvalue-expr)]
+     (if (nil? ~pvalue-sym)
+       (.setObject ~prepared-stmt ~pindex-sym nil)
+       (try
+         ~@body
+         (catch ClassCastException e#
+           (throw (IllegalArgumentException.
+                    (str "Error setting SQL param " ~pindex-sym ~(apply str " as " type-label ": " body))
+                    e#)))
+         (catch Exception e#
+           (throw (IllegalStateException.
+                    (str "Error setting SQL param " ~pindex-sym ~(apply str " as " type-label ": " body))
+                    e#)))))))
+
+
 (defn lay-param-expr
   "Given prepared statement symbol, parm type, param index expression/symbol and param value expression/symbol, return
   an expression to set JDBC prepared statement param."
-  [pstmt-sym param-type pindex-sym pvalue-sym]
+  [pstmt-sym param-type pidx-sym pval-sym]
   (when-not (contains? t/all-typemap param-type) (i/expected-param-type param-type))
   (if (contains? t/multi-typemap param-type)  ; multi-bit?
     (let [i-sym (gensym "i-")
           v-sym (gensym "v-")]
-      `(i/loop-indexed [~i-sym ~pindex-sym
-                        ~v-sym ~pvalue-sym]
+      `(i/loop-indexed [~i-sym ~pidx-sym
+                        ~v-sym ~pval-sym]
          ~(lay-param-expr pstmt-sym (get t/multi-typemap param-type) i-sym v-sym)))
     (case (get t/single-typemap param-type)
-      :nil        `(set-param-value ~pstmt-sym :nil ~pindex-sym ~pvalue-sym)
-      :boolean    `(.setBoolean ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "boolean"    (boolean ~pvalue-sym)))
-      :byte       `(.setByte    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "byte"       (byte    ~pvalue-sym)))
-      :byte-array `(.setBytes   ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "byte-array" (let [v# ~pvalue-sym]
-                                                                                             (cond
-                                                                                               (= (type v#) ba-type) v#
-                                                                                               (nil? v#)             nil
-                                                                                               :else (byte-array v#)))))
-      :date       `(let [p# (try-param ~pindex-sym "date" ~pvalue-sym)]
+      :nil        `(set-param-value ~pstmt-sym :nil ~pidx-sym ~pval-sym)
+      :boolean    `(try-set ~pstmt-sym ~pidx-sym "boolean"    ~pval-sym v# (.setBoolean ~pstmt-sym ~pidx-sym (boolean
+                                                                                                               v#)))
+      :byte       `(try-set ~pstmt-sym ~pidx-sym "byte"       ~pval-sym v# (.setByte    ~pstmt-sym ~pidx-sym (byte v#))) 
+      :byte-array `(try-set ~pstmt-sym ~pidx-sym "byte-array" ~pval-sym v# (.setBytes   ~pstmt-sym ~pidx-sym v#))
+      :date       `(let [p# (try-param ~pidx-sym "date" ~pval-sym)]
                      (cond
-                       (instance? Date p#) (.setDate ~pstmt-sym ~pindex-sym ^java.sql.Date p#)
+                       (instance? Date p#) (.setDate ~pstmt-sym ~pidx-sym ^java.sql.Date p#)
                        ;; calendar
-                       (instance? Calendar p#) (.setDate ~pstmt-sym ~pindex-sym
+                       (instance? Calendar p#) (.setDate ~pstmt-sym ~pidx-sym
                                                  (Date. (.getTimeInMillis ^java.util.Calendar p#))
                                                  ^java.util.Calendar p#)
-                       (nil? p#)    (.setDate ~pstmt-sym ~pindex-sym nil)
+                       (nil? p#)    (.setDate ~pstmt-sym ~pidx-sym nil)
                        :otherwise   (i/expected "java.sql.Date or java.util.Calendar instance" p#)))
-      :double     `(.setDouble    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "double"   (double     ~pvalue-sym)))
-      :float      `(.setFloat     ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "float"    (float      ~pvalue-sym)))
-      :int        `(.setInt       ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "int"      (int        ~pvalue-sym)))
-      :long       `(.setLong      ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "long"     (long       ~pvalue-sym)))
-      :nstring    `(.setNString   ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "string"   (verify java.lang.String
-                                                                                             ~pvalue-sym)))
-      :object     `(.setObject    ~pstmt-sym ~pindex-sym ~pvalue-sym)
-      :string     `(.setString    ~pstmt-sym ~pindex-sym (try-param ~pindex-sym "string"   (verify java.lang.String
-                                                                                             ~pvalue-sym)))
-      :time       `(let [p# (try-param ~pindex-sym "time" ~pvalue-sym)]
+      :double     `(try-set ~pstmt-sym ~pidx-sym "double"  ~pval-sym v# (.setDouble  ~pstmt-sym ~pidx-sym (double v#)))
+      :float      `(try-set ~pstmt-sym ~pidx-sym "float"   ~pval-sym v# (.setFloat   ~pstmt-sym ~pidx-sym (float v#)))
+      :int        `(try-set ~pstmt-sym ~pidx-sym "int"     ~pval-sym v# (.setInt     ~pstmt-sym ~pidx-sym (int v#)))
+      :long       `(try-set ~pstmt-sym ~pidx-sym "long"    ~pval-sym v# (.setLong    ~pstmt-sym ~pidx-sym (long v#)))
+      :nstring    `(try-set ~pstmt-sym ~pidx-sym "nstring" ~pval-sym v# (.setNString ~pstmt-sym ~pidx-sym v#))
+      :object     `(.setObject    ~pstmt-sym ~pidx-sym ~pval-sym)
+      :string     `(try-set ~pstmt-sym ~pidx-sym "string"  ~pval-sym v# (.setString  ~pstmt-sym ~pidx-sym v#))
+      :time       `(let [p# (try-param ~pidx-sym "time" ~pval-sym)]
                      (cond
-                       (instance? Date p#) (.setTime ~pstmt-sym ~pindex-sym ^java.sql.Time p#)
+                       (instance? Date p#) (.setTime ~pstmt-sym ~pidx-sym ^java.sql.Time p#)
                        ;; calendar
-                       (instance? Calendar p#) (.setTime ~pstmt-sym ~pindex-sym
+                       (instance? Calendar p#) (.setTime ~pstmt-sym ~pidx-sym
                                                  (Time. (.getTimeInMillis ^java.util.Calendar p#))
                                                  ^java.util.Calendar p#)
-                       (nil? p#)    (.setTime ~pstmt-sym ~pindex-sym nil)
+                       (nil? p#)    (.setTime ~pstmt-sym ~pidx-sym nil)
                        :otherwise   (i/expected "java.sql.Time or java.util.Calendar instance" p#)))
-      :timestamp  `(let [p# (try-param ~pindex-sym "timestamp" ~pvalue-sym)]
+      :timestamp  `(let [p# (try-param ~pidx-sym "timestamp" ~pval-sym)]
                      (cond
-                       (instance? Timestamp p#) (.setTimestamp ~pstmt-sym ~pindex-sym ^java.sql.Timestamp p#)
+                       (instance? Timestamp p#) (.setTimestamp ~pstmt-sym ~pidx-sym ^java.sql.Timestamp p#)
                        ;; calendar
-                       (instance? Calendar p#) (.setTimestamp ~pstmt-sym ~pindex-sym
+                       (instance? Calendar p#) (.setTimestamp ~pstmt-sym ~pidx-sym
                                                  (Timestamp. (.getTimeInMillis ^java.util.Calendar p#))
                                                  ^java.util.Calendar p#)
-                       (nil? p#)    (.setTimestamp ~pstmt-sym ~pindex-sym nil)
+                       (nil? p#)    (.setTimestamp ~pstmt-sym ~pidx-sym nil)
                        :otherwise   (i/expected "java.sql.Timestamp or java.util.Calendar instance" p#)))
       (i/expected-single-param-type param-type))))
 
