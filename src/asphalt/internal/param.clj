@@ -142,7 +142,7 @@
   (if (contains? t/multi-typemap param-type)  ; multi-bit?
     (let [i-sym (gensym "i-")
           v-sym (gensym "v-")]
-      `(i/loop-indexed [~i-sym ~pidx-sym
+      `(i/each-indexed [~i-sym ~pidx-sym
                         ~v-sym ~pval-sym]
          ~(lay-param-expr pstmt-sym (get t/multi-typemap param-type) i-sym v-sym)))
     (case (get t/single-typemap param-type)
