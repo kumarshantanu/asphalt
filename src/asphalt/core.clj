@@ -372,13 +372,19 @@
 
 
 (defn compile-sql-template
-  "Given a SQL template (SQL tokens and result types) compile it into a more efficient SQL source with following
+  "Given a SQL template (SQL tokens and result types) compile it into a more efficient SQL source with the following
   enhancements:
-    - associated params-setter
-    - associated row-maker
-    - associated column-reader
-    - associated conn-worker
-    - act as arity-2 function (f conn-source params)
+    * associated params-setter
+    * associated row-maker
+    * associated column-reader
+    * associated conn-worker
+    * act as arity-2 function (f conn-source params)
+  Options:
+    :make-params-setter arity-2 fn (param-keys, param-types)  returns arity-2 fn (prepared-stmt, params) to set params
+    :make-row-maker     arity-1 fn (result-types)             returns arity-2 fn (result-set, col-count) to return row
+    :make-column-reader arity-1 fn (result-types)             returns arity-1 fn (result-set) to return column value
+    :make-conn-worker   arity-2 fn (sql-tokens, result-types) returns arity-3 fn (conn-source, sql-source, params)
+    :sql-name           string (or coerced as string) name for the template
   See:
     `parse-sql` for SQL-template format"
   [sql-tokens result-types
@@ -421,14 +427,14 @@
            (map second)
            (every? (partial contains? t/single-typemap)))
        (isql/->StaticSqlTemplate
-         sql-name
+         (i/as-str sql-name)
          (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
          (make-row-maker result-types)
          (make-column-reader result-types)
          (make-conn-worker sanitized-st result-types))
        (isql/->DynamicSqlTemplate
-         sql-name
+         (i/as-str sql-name)
          (reduce (fn [st token] (cond
                                   (and (string? token) (string? (last st))) (conj (pop st) (str (last st) token))
                                   (and (vector? token) (string? (last st))
