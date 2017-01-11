@@ -4,11 +4,13 @@
 
 * [TODO] Support stored procedure call
 * [TODO] Support for more parameter types
+* [TODO] Make type hints unnecessary for performance by default
+* [TODO] Use type hints only for null-safe coercion in read/write
+* [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
-## 0.5.0 / 2017-January-??
+## 0.5.0 / 2017-January-12
 
-* [TODO] Instrumentation logging event for SQL-execution should include `ISqlSource` instead of SQL string
 * Overhaul `asphalt.core/defsql`
   * Named by default
     * Implement `clojure.lang.Named` interface, hence `(name sql-source)` works

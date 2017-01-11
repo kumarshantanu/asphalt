@@ -28,7 +28,7 @@ Features:
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.4.0"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Leiningen coordinates: `[asphalt "0.5.0"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
@@ -74,29 +74,29 @@ Typically one would create a connection-pooled datasource as connection source f
 This section covers the minimal examples only. Advanced features are covered in subsequent sections.
 
 ```clojure
-;; insert with generated keys
+;; insert row, returning auto-generated keys
 (a/genkey conn-source
   "INSERT INTO emp (name, salary, dept) VALUES (?, ?, ?)"
   ["Joe Coder" 100000 "Accounts"])
 
-;; update rows
+;; update rows, returning the number of rows updated
 ;; used for `INSERT`, `UPDATE`, `DELETE` statements, or DDL statements such as `ALTER TABLE`, `CREATE INDEX` etc.
 (a/update conn-source "UPDATE emp SET salary = ? WHERE dept = ?" [110000 "Accounts"])
 
-;; query one row (`a/fetch-single-row` returns a Java array of column values, so we wrap the call with `vec`)
-(vec (a/query a/fetch-single-row
-       conn-source
-       "SELECT name, salary, dept FROM emp" []))
-
-;; query one row, and work with column values via de-structuring the returned Java array
-(let [[name salary dept] (a/query a/fetch-single-row ...)]
-  ;; work with the column values
-  ...)
-
-;; query several rows (returns a vector of rows, where each row is a Java array of column values)
+;; query zero (nil) or more rows (vector of rows)
 (a/query a/fetch-rows
   conn-source
   "SELECT name, salary, dept FROM emp" [])
+
+;; query zero (nil) or one row (exception is thrown if result-set has more than one row)
+(a/query a/fetch-optional-row
+  conn-source
+  "SELECT name, salary, dept FROM emp" [])
+
+;; query one row, and work with column values via de-structuring
+(let [[name salary dept] (a/query a/fetch-single-row ...)]
+  ;; work with the column values
+  ...)
 ```
 
 
@@ -120,6 +120,22 @@ With SQL-templates, you can pass param maps with keys as param names:
 ```
 
 
+#### SQL-templates are functions
+
+SQL-templates defined with `defsql` are invokable as functions:
+
+```clojure
+;; defsql infers connection worker as either update or query
+(sql-update conn-source {:new-salary 110000 :dept "Accounts"})
+
+;; for genkey we need to specify as such
+(a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name, $salary, $dept)"
+  {:make-conn-worker a/genkey})
+
+(sql-insert conn-source {:name "Joe Coder" :salary 100000 :dept "Accounts"})
+```
+
+
 ### SQL templates with type hints
 
 The examples we saw above read and write values as objects, which means we depend on the JDBC driver for the conversion.
@@ -131,7 +147,8 @@ SQL-templates let you optionally specify the types of params and also the result
 
 (a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
 
-(a/defsql sql-update "UPDATE emp SET salary = ^int $new-salary WHERE dept = ^string $dept")
+;; multi-value param
+(a/defsql sql-update "UPDATE emp SET salary = ^int $new-salary WHERE dept IN (^strings $depts)")
 ```
 
 The operations on the type-hinted SQL-templates remain the same as non type-hinted SQL templates, but internally the
@@ -142,23 +159,28 @@ appropriate types are used when communicating with the JDBC driver.
 
 The following types are supported as type hints:
 
-| Type       | Comments            |
-|------------|---------------------|
-|`bool`      |                     |
-|`boolean`   | duplicate of `bool` |
-|`byte`      |                     |
-|`byte-array`|                     |
-|`date`      |                     |
-|`double`    |                     |
-|`float`     |                     |
-|`int`       |                     |
-|`integer`   | duplicate of `int`  |
-|`long`      |                     |
-|`nstring`   |                     |
-|`object`    |                     |
-|`string`    |                     |
-|`time`      |                     |
-|`timestamp` |                     |
+| Type       | Comments             | Multi-value |
+|------------|----------------------|-------------|
+|`bool`      |Duplicate of `boolean`|`bools`      |
+|`boolean`   |                      |`booleans`   |
+|`byte`      |                      |`bytes`      |
+|`byte-array`|                      |`byte-arrays`|
+|`date`      |                      |`dates`      |
+|`double`    |                      |`doubles`    |
+|`float`     |                      |`floats`     |
+|`int`       |                      |`ints`       |
+|`integer`   |Duplicate of `int`    |`integers`   |
+|`long`      |                      |`longs`      |
+|`nstring`   |                      |`nstrings`   |
+|`object`    |Catch-all type        |`objects`    |
+|`string`    |                      |`strings`    |
+|`time`      |                      |`times`      |
+|`timestamp` |                      |`timestamps` |
+
+Note on multi-value types:
+- Only applicable for SQL params, not for query result types
+- Corresponding param must be a vector of values
+- Every multi-value param expands into comma-separated `?` placeholders
 
 
 #### Caveats with SQL-template type hints
@@ -169,29 +191,6 @@ The following types are supported as type hints:
   every return column type as in `SELECT * ^int ^string ^int ^date` if the return columns are of that type.
 - Queries that use `UNION` are also tricky to use with return column type hints. You should hint only one set of
   return columns, not in every `UNION` sub-query.
-
-
-### Query shorthand
-
-A SQL query always need a fetch function to retrieve the result rows. You can associate a fetch function with SQL
-queries. See example below:
-
-```clojure
-(a/defsql sql-select "SELECT ^string name, ^int salary, ^string dept FROM emp")
-
-(a/query a/fetch-rows
-  data-source sql-select [])
-```
-
-The above can be expressed as follows:
-
-```clojure
-(a/defquery sql-select  ; <- this defines a fn named sql-select
-  "SELECT ^string name, ^int salary, ^string dept FROM emp"
-  a/fetch-rows)
-
-(sql-select data-source [])
-```
 
 
 ### Transactions
@@ -256,14 +255,14 @@ such that the fn is invoked in a transaction.
 
 ## Development
 
-Running tests: `lein with-profile dev,c17 test`
+Running tests: `lein with-profile dev,c18 test`
 
-Running performance benchmarks: `lein with-profile dev,c17,perf test`
+Running performance benchmarks: `lein with-profile dev,c18,perf test`
 
 
 ## License
 
-Copyright © 2015 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
+Copyright © 2015-2017 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
