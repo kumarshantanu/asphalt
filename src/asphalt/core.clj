@@ -360,12 +360,12 @@
   ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
                  :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
                  :as options}]
-    (let [[sql-template result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
+    (let [[sql-tokens result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
       [(reduce (fn [st token] (conj st (if (string? token)
                                          token
                                          (let [[pname ptype] token]
                                            [(isql/encode-name pname) (isql/encode-param-type sql ptype)]))))
-         [] sql-template)
+         [] sql-tokens)
        (mapv (partial isql/encode-result-type sql) result-types)])))
 
 
