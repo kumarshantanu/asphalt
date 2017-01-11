@@ -354,7 +354,9 @@
   * sql-tokens is a vector of alternating string and param-pair vectors
   * param-pair is a vector of two elements [param-key param-type] (param keys are used to extract map params)
   * result-types is a vector of result types
-  See asphalt.type for supported SQL types."
+  See:
+    `compile-sql-template` to compile a SQL template for efficiency/enhancement
+    asphalt.type for supported SQL types."
   ([^String sql]
     (parse-sql sql {}))
   ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
@@ -369,7 +371,16 @@
        (mapv (partial isql/encode-result-type sql) result-types)])))
 
 
-(defn build-sql-source
+(defn compile-sql-template
+  "Given a SQL template (SQL tokens and result types) compile it into a more efficient SQL source with following
+  enhancements:
+    - associated params-setter
+    - associated row-maker
+    - associated column-reader
+    - associated conn-worker
+    - act as arity-2 function (f conn-source params)
+  See:
+    `parse-sql` for SQL-template format"
   [sql-tokens result-types
    {:keys [make-params-setter
            make-row-maker
@@ -432,7 +443,7 @@
 
 
 (defmacro defsql
-  "Define a parsed SQL template that can be used to execute it later."
+  "Define a parsed/compiled SQL template that can be used to execute it later."
   ([var-symbol sql]
     (when-not (symbol? var-symbol)
       (i/expected "a symbol" var-symbol))
@@ -443,4 +454,4 @@
     `(def ~var-symbol (let [opts# (merge {:sql-name ~(name var-symbol)} ~options)]
                         (->> opts#
                           (conj (parse-sql ~sql opts#))
-                          (apply build-sql-source ))))))
+                          (apply compile-sql-template ))))))
