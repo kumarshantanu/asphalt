@@ -7,7 +7,7 @@
 ;   You must not remove this notice, or any other, from this software.
 
 
-(ns asphalt.internal.sql
+(ns asphalt.internal.isql
   (:require
     [clojure.string   :as string]
     [asphalt.internal :as i]

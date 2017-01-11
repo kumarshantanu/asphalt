@@ -10,12 +10,12 @@
 (ns asphalt.core
   (:refer-clojure :exclude [update])
   (:require
-    [clojure.string       :as str]
-    [asphalt.param        :as p]
-    [asphalt.result       :as r]
-    [asphalt.type         :as t]
-    [asphalt.internal     :as i]
-    [asphalt.internal.sql :as isql])
+    [clojure.string        :as str]
+    [asphalt.param         :as p]
+    [asphalt.result        :as r]
+    [asphalt.type          :as t]
+    [asphalt.internal      :as i]
+    [asphalt.internal.isql :as isql])
   (:import
     [java.util.regex Pattern]
     [java.sql  Connection PreparedStatement ResultSet ResultSetMetaData]

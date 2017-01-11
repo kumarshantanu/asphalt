@@ -9,10 +9,10 @@
 
 (ns asphalt.result
   (:require
-    [clojure.string          :as str]
-    [asphalt.internal        :as i]
-    [asphalt.internal.result :as iresult]
-    [asphalt.type            :as t])
+    [clojure.string           :as str]
+    [asphalt.internal         :as i]
+    [asphalt.internal.iresult :as iresult]
+    [asphalt.type             :as t])
   (:import
     [java.sql Blob Clob ResultSet ResultSetMetaData]))
 

@@ -9,9 +9,9 @@
 
 (ns asphalt.param
   (:require
-    [asphalt.internal       :as i]
-    [asphalt.internal.param :as iparam]
-    [asphalt.type           :as t])
+    [asphalt.internal        :as i]
+    [asphalt.internal.iparam :as iparam]
+    [asphalt.type            :as t])
   (:import
     [java.util Calendar TimeZone]
     [java.sql Date PreparedStatement Time Timestamp]))
