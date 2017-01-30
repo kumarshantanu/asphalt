@@ -9,7 +9,7 @@
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
-## 0.5.1 / 2017-January-??
+## 0.5.1 / 2017-January-31
 
 - Fix issue where result type hints are not used by generated row maker
 

@@ -28,7 +28,7 @@ Features:
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.5.0"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Leiningen coordinates: `[asphalt "0.5.1"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
