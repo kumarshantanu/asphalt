@@ -9,6 +9,11 @@
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
+## 0.5.1 / 2017-January-??
+
+- [TODO] Fix issue where return type hint is not used by row maker
+
+
 ## 0.5.0 / 2017-January-12
 
 * Overhaul `asphalt.core/defsql`
