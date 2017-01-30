@@ -85,7 +85,9 @@
     (let [rsyms (-> (count result-types)
                   (repeatedly gensym)
                   vec)
-          rlhs  (mapv vector rsyms result-types col-args)]
+          rlhs  (mapv (fn [sym type arg]
+                        [(vary-meta sym assoc :tag type) arg])
+                  rsyms result-types col-args)]
       (eval `(fn row-maker#
                ([^ResultSet result-set# ^long col-count#]
                  (when-not (= col-count# ~(count result-types))

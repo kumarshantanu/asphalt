@@ -11,7 +11,7 @@
 
 ## 0.5.1 / 2017-January-??
 
-- [TODO] Fix issue where return type hint is not used by row maker
+- Fix issue where result type hints are not used by generated row maker
 
 
 ## 0.5.0 / 2017-January-12
