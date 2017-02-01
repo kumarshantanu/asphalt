@@ -51,7 +51,8 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 -- ^boolean gender,
 ^int salary, ^string dept, ^date j_date FROM emp")
 
-(a/defsql t-crosstype "SELECT ^string j_date FROM emp")
+(a/defsql t-crosstype-select "SELECT ^string j_date FROM emp")
+(a/defsql t-crosstype-update "UPDATE emp SET j_date = ^string $jd")
 
 (a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?")
 
@@ -74,11 +75,18 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
         row (zipmap [:name :salary :dept :joined] vs1)]
     (let [generated-key (a/genkey u/ds t-insert row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
+    ;; retrieval test
     (is (= 1 (a/query a/fetch-single-value
                u/ds t-count [])) "Verify that row was inserted")
-    (is (= (str jd1) (a/query a/fetch-single-value u/ds t-crosstype [])))
-    (is (= [(str jd1)] (a/query a/fetch-single-row u/ds t-crosstype [])))
-    (is (= [[(str jd1)]] (a/query a/fetch-rows u/ds t-crosstype [])))))
+    (is (= (str jd1) (a/query a/fetch-single-value u/ds t-crosstype-select [])))
+    (is (= [(str jd1)] (a/query a/fetch-single-row u/ds t-crosstype-select [])))
+    (is (= [[(str jd1)]] (a/query a/fetch-rows u/ds t-crosstype-select [])))
+    ;; update test
+    (let [strdate "2016-02-01"]
+      (t-crosstype-update u/ds [strdate])
+      (is (= strdate (a/query a/fetch-single-value u/ds t-crosstype-select [])))
+      (is (= [strdate] (a/query a/fetch-single-row u/ds t-crosstype-select [])))
+      (is (= [[strdate]] (a/query a/fetch-rows u/ds t-crosstype-select []))))))
 
 
 (deftest test-params
