@@ -11,7 +11,7 @@
 * [BREAKING CHANGE] Default every unspecified hint to `^object` instead of dynamic discovery
   * This makes type hints unnecessary for performance by default
   * Dynamic discovery can now be enforced with explicit `^nil` type hint
-* [TODO] Shortcut `^^` to imply default type hint (useful in hinting result columns)
+* Allow shortcut `^^` to imply default type hint (useful in hinting result columns)
 * [BREAKING CHANGE - TODO] Make all type hints (even those with primitive Java types) null-safe for read/write
   * This makes all type hints (for read/write) suitable only for coercion
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)

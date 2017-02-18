@@ -54,7 +54,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)")
 (a/defsql t-crosstype-select "SELECT ^string j_date FROM emp")
 (a/defsql t-crosstype-update "UPDATE emp SET j_date = ^string $jd")
 
-(a/defsql t-selfew "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?")
+(a/defsql t-selfew "SELECT ^^ name, ^^ salary, ^^ dept, ^^ j_date FROM emp WHERE name = ?")
 
 (a/defsql t-qfetch "SELECT ^string name, ^int salary, ^string dept, ^date j_date FROM emp WHERE name = ?"
   {:make-conn-worker (constantly (partial a/query a/fetch-single-row))})

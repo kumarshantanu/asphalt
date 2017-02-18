@@ -108,8 +108,12 @@
   (let [^StringBuilder tsb (:ts parser-state)]
     (cond
       ;; type char
-      (valid-type-char? tsb ^char ch)
-      (do (.append tsb ^char ch)        nil)
+      (valid-type-char? tsb ^char ch) (do (.append tsb ^char ch)
+                                        nil)
+      ;; shortcut (for default)
+      (and (zero? (.length tsb))
+        (= tc ch))                    (do (.append tsb (i/as-str (get t/single-typemap nil)))
+                                        nil)
       ;; whitespace implies type has ended
       (Character/isWhitespace ^char ch) delta-state
       ;; catch-all default case
