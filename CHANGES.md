@@ -4,14 +4,21 @@
 
 * [TODO] Support stored procedure call
 * [TODO] Support for more parameter types
-* [TODO] Make type hints unnecessary for performance by default
-* [TODO] Use type hints only for null-safe coercion in read/write
+
+
+## [WIP] 0.6.0 / 2017-February-??
+
+* [TODO] Default every type hint to `^object` instead of dynamic discovery
+  * This makes type hints unnecessary for performance by default
+* [TODO] Shortcut `^^` to imply default type hint (useful in hinting result columns)
+* [BREAKING CHANGE - TODO] Make all type hints (even those with primitive Java types) null-safe for read/write
+  * This makes all type hints (for read/write) suitable only for coercion
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
 ## 0.5.1 / 2017-January-31
 
-- Fix issue where result type hints are not used by generated row maker
+* Fix issue where result type hints are not used by generated row maker
 
 
 ## 0.5.0 / 2017-January-12
@@ -96,7 +103,7 @@
 
 ## 0.2.0 / 2015-September-07
 
-* Expect type hints _before_ subjects, consistent with Clojure
+* [BREAKING CHANGE] Expect type hints _before_ subjects, consistent with Clojure
 * New SQL abstraction: `asphalt.type.ISql`
 * ISql supports string, map and `SQLTemplate` out of the box
 * Performance improvement via primitive arrays in `SQLTemplate`
