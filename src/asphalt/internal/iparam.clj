@@ -139,7 +139,7 @@
   an expression to set JDBC prepared statement param."
   [pstmt-sym param-type pidx-sym pval-sym]
   (when-not (contains? t/all-typemap param-type) (i/expected-param-type param-type))
-  (if (contains? t/multi-typemap param-type)  ; multi-bit?
+  (if (contains? t/multi-typemap param-type)
     (let [i-sym (gensym "i-")
           v-sym (gensym "v-")]
       `(i/each-indexed [~i-sym ~pidx-sym
