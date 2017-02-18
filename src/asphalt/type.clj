@@ -42,7 +42,7 @@
 
 ;; Supported SQL types (aliases not included)
 ;
-; :nil
+; :nil (implies dynamic discovery)
 ; :boolean
 ; :byte
 ; :byte-array
@@ -58,7 +58,7 @@
 ; :timestamp
 
 
-(def single-typemap {nil         :nil      ; alias for :nil
+(def single-typemap {nil         :object   ; default type hint
                      :nil        :nil
                      :bool       :boolean  ; alias for :boolean
                      :boolean    :boolean
