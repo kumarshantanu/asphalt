@@ -1,8 +1,10 @@
-{:adapter  :h2
- :target   :memory
- :database "test;MVCC=true"
- :username "sa"
- :password ""
+{:adapter    :h2
+ :target     :memory
+ :database   "test;MVCC=true"
+ :jdbc-url   "jdbc:h2:mem:test;MVCC=true"
+ :classname  "org.h2.Driver"
+ :username   "sa"
+ :password   ""
  :create-ddl "CREATE TABLE emp (
     id     INT PRIMARY KEY AUTO_INCREMENT,
     name   VARCHAR(50) NOT NULL,

@@ -11,7 +11,7 @@
   (:require
     [clojure.edn     :as e]
     [clojure.java.io :as io]
-    [clj-dbcp.core   :as d]
+    [asphalt.test-connpool :as pool]
     [asphalt.core    :as a])
   (:import
     [java.sql Date]
@@ -50,7 +50,7 @@
               e/read-string))
 
 
-(def orig-ds (d/make-datasource config))
+(def orig-ds (pool/make-datasource config))
 
 
 (def ds
