@@ -4,17 +4,22 @@
 
 * [TODO] Support stored procedure call
 * [TODO] Support for more parameter types
+* [TODO - BREAKING CHANGE] Make all type hints (even those with primitive Java types) null-safe for reads
+  * Challenge: JDBC drivers do not implement this reliably, e.g.
+    * H2 does not implement `ResultSet.getObject(int, Class)` at all
+    * MySQL always delegates `ResultSet.getObject(int, Integer)` to `ResultSet.getInt(int)`
+  * Challenge: All connection pool libraries do not support this, e.g.
+    * Apache DBCP 1.x does not implement JDBC 4.2, and by extension `ResultSet.getObject(int, Class)`
+* [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
 ## [WIP] 0.6.0 / 2017-February-??
 
 * [BREAKING CHANGE] Default every unspecified hint to `^object` instead of dynamic discovery
-  * This makes type hints unnecessary for performance by default
+  * This makes type hints unnecessary for achieving best performance
   * Dynamic discovery can now be enforced with explicit `^nil` type hint
+  * Type hints are henceforth meant for result value coercion only
 * Allow shortcut `^^` to imply default type hint (useful in hinting result columns)
-* [BREAKING CHANGE - TODO] Make all type hints (even those with primitive Java types) null-safe for read/write
-  * This makes all type hints (for read/write) suitable only for coercion
-* [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
 ## 0.5.1 / 2017-January-31
