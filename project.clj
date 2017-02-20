@@ -1,4 +1,4 @@
-(defproject asphalt "0.6.0-SNAPSHOT"
+(defproject asphalt "0.6.0"
   :description "A Clojure library for JDBC access"
   :url "https://github.com/kumarshantanu/asphalt"
   :license {:name "Eclipse Public License"

@@ -13,7 +13,7 @@
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
-## [WIP] 0.6.0 / 2017-February-??
+## 0.6.0 / 2017-February-20
 
 * [BREAKING CHANGE] Default every unspecified hint to `^object` instead of dynamic discovery
   * This makes type hints unnecessary for achieving best performance

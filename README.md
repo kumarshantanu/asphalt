@@ -2,7 +2,6 @@
 
 A Clojure library for JDBC access.
 
-**Currently in Alpha. Expect breaking changes.**
 
 Features:
 
@@ -28,7 +27,7 @@ Features:
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.5.1"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Leiningen coordinates: `[asphalt "0.6.0"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
@@ -159,23 +158,30 @@ appropriate types are used when communicating with the JDBC driver.
 
 The following types are supported as type hints:
 
-| Type       | Comments             | Multi-value |
-|------------|----------------------|-------------|
-|`bool`      |Duplicate of `boolean`|`bools`      |
-|`boolean`   |                      |`booleans`   |
-|`byte`      |                      |`bytes`      |
-|`byte-array`|                      |`byte-arrays`|
-|`date`      |                      |`dates`      |
-|`double`    |                      |`doubles`    |
-|`float`     |                      |`floats`     |
-|`int`       |                      |`ints`       |
-|`integer`   |Duplicate of `int`    |`integers`   |
-|`long`      |                      |`longs`      |
-|`nstring`   |                      |`nstrings`   |
-|`object`    |Catch-all type        |`objects`    |
-|`string`    |                      |`strings`    |
-|`time`      |                      |`times`      |
-|`timestamp` |                      |`timestamps` |
+|            |                      |             | Result  |
+| Type       | Comments             | Multi-value | on NULL |
+|------------|----------------------|-------------|---------|
+|`nil`       |Dynamic/slow discovery| none        | `nil`   |
+|`bool`      |Duplicate of `boolean`|`bools`      | `false` |
+|`boolean`   |                      |`booleans`   | `false` |
+|`byte`      |                      |`bytes`      | `0`     |
+|`byte-array`|                      |`byte-arrays`| `nil`   |
+|`date`      |                      |`dates`      | `nil`   |
+|`double`    |                      |`doubles`    | `0.0`   |
+|`float`     |                      |`floats`     | `0.0`   |
+|`int`       |                      |`ints`       | `0`     |
+|`integer`   |Duplicate of `int`    |`integers`   | `0`     |
+|`long`      |                      |`longs`      | `0`     |
+|`nstring`   |                      |`nstrings`   | `nil`   |
+|`object`    |Catch-all type        |`objects`    | `nil`   |
+|`string`    |                      |`strings`    | `nil`   |
+|`time`      |                      |`times`      | `nil`   |
+|`timestamp` |                      |`timestamps` | `nil`   |
+
+Note on type hints in result columns:
+- Primitive type hints for result columns coerce `NULL` value as primitive default values as shown in the table.
+- You may specify `^^` (shortcut) as type hint to imply default or no type hint, e.g.
+  `SELECT ^^ name, ^^ age, ^string join_date FROM emp WHERE id = ^int $id`
 
 Note on multi-value types:
 - Only applicable for SQL params, not for query result types
@@ -185,7 +191,7 @@ Note on multi-value types:
 
 #### Caveats with SQL-template type hints
 
-- Type hints are optional at each param level. However, when type-hinting the return columns in a query you should
+- Type hints are optional at each param level. However, when type-hinting the result columns in a query you should
   either type-hint every column, or not specify type-hints for any column at all.
 - Wildcards (e.g. `SELECT *`) in return columns are tricky to use with return column type hints. You should hint
   every return column type as in `SELECT * ^int ^string ^int ^date` if the return columns are of that type.
@@ -255,9 +261,9 @@ such that the fn is invoked in a transaction.
 
 ## Development
 
-Running tests: `lein with-profile dev,c18 test`
+Running tests: `lein do clean, test` or `lein with-profile c18,dev,dbcp test`
 
-Running performance benchmarks: `lein with-profile dev,c18,perf test`
+Running performance benchmarks: `lein with-profile c18,dev,dbcp,perf test`
 
 
 ## License
