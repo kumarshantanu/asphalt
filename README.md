@@ -158,9 +158,8 @@ appropriate types are used when communicating with the JDBC driver.
 
 The following types are supported as type hints:
 
-|            |                      |             | Result  |
-| Type       | Comments             | Multi-value | on NULL |
-|------------|----------------------|-------------|---------|
+| Type       | Comments             | Multi-value | Result on NULL |
+|------------|----------------------|-------------|----------------|
 |`nil`       |Dynamic/slow discovery| none        | `nil`   |
 |`bool`      |Duplicate of `boolean`|`bools`      | `false` |
 |`boolean`   |                      |`booleans`   | `false` |
