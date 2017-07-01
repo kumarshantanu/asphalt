@@ -2,14 +2,24 @@
 
 ## TODO and Ideas
 
+* [TODO] Function to support large result-sets: read a small subset of rows
+* [TODO] Fix documentation where a bad `:make-conn-worker` option value `a/genkey` is passed
+* [TODO] Overhaul documentation page
+* [TODO] In `defsql` and `compile-sql-template` accept options to use directly instead of their factory functions
+  * `:result-set-worker` (this has no corresponding factory fn)
+  * `:params-setter`
+  * `:row-maker`
+  * `:column-reader`
+  * `:conn-worker`
 * [TODO] Support stored procedure call
-* [TODO] Support for more parameter types
+* [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
 * [TODO - BREAKING CHANGE] Make all type hints (even those with primitive Java types) null-safe for reads
   * Challenge: JDBC drivers do not implement this reliably, e.g.
     * H2 does not implement `ResultSet.getObject(int, Class)` at all
     * MySQL always delegates `ResultSet.getObject(int, Integer)` to `ResultSet.getInt(int)`
   * Challenge: All connection pool libraries do not support this, e.g.
     * Apache DBCP 1.x does not implement JDBC 4.2, and by extension `ResultSet.getObject(int, Class)`
+  * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 
 
