@@ -11,12 +11,14 @@
 * [TODO] Function to support large result-sets: read a small subset of rows
 * [TODO] Fix documentation where a bad `:make-conn-worker` option value `a/genkey` is passed
 * [TODO] Overhaul documentation page
-* [TODO] In `defsql` and `compile-sql-template` accept options to use directly instead of their factory functions
-  * `:result-set-worker` (this has no corresponding factory fn)
-  * `:params-setter`
-  * `:row-maker`
-  * `:column-reader`
-  * `:conn-worker`
+* Enhance `defsql` and `compile-sql-template`
+  * Accept options for direct use instead of factory functions
+    * `:result-set-worker` (this has no corresponding factory fn)
+    * `:params-setter`
+    * `:row-maker`
+    * `:column-reader`
+    * `:conn-worker`
+  * [TODO] Behave as arity-1 fn for SQL that accepts no params
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
 * [TODO - BREAKING CHANGE] Make all type hints (even those with primitive Java types) null-safe for reads
   * Challenge: JDBC drivers do not implement this reliably, e.g.

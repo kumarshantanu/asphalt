@@ -380,38 +380,59 @@
     * associated conn-worker
     * act as arity-2 function (f conn-source params)
   Options:
-    :make-params-setter arity-2 fn (param-keys, param-types)  returns arity-2 fn (prepared-stmt, params) to set params
-    :make-row-maker     arity-1 fn (result-types)             returns arity-2 fn (result-set, col-count) to return row
-    :make-column-reader arity-1 fn (result-types)             returns arity-1 fn (result-set) to return column value
-    :make-conn-worker   arity-2 fn (sql-tokens, result-types) returns arity-3 fn (conn-source, sql-source, params)
+    :result-set-worker  (fn [sql-source result-set])         - used when :make-conn-worker auto-defaults to query
+    :params-setter      (fn [prepared-stmt params])          - used when :make-params-setter not specified
+    :row-maker          (fn [result-set col-count])          - used when :make-row-maker not specified
+    :column-reader      (fn [result-set])                    - used when :make-column-reader not specified
+    :conn-worker        (fn [conn-source sql-source params]) - used when :make-conn-worker not specified
+    :make-params-setter (fn [param-keys param-types]) -> (fn [prepared-stmt params]) to set params
+    :make-row-maker     (fn [result-types]) -> (fn [result-set col-count]) to return row
+    :make-column-reader (fn [result-types]) -> (fn [result-set]) to return column value
+    :make-conn-worker   (fn [sql-tokens result-types]) -> (fn [conn-source sql-source params])
     :sql-name           string (or coerced as string) name for the template
   See:
     `parse-sql` for SQL-template format"
   [sql-tokens result-types
-   {:keys [make-params-setter
+   {:keys [result-set-worker
+           params-setter
+           row-maker
+           column-reader
+           conn-worker
+           make-params-setter
            make-row-maker
            make-column-reader
            make-conn-worker
            sql-name]
-    :or {make-params-setter (fn [param-keys param-types] (if (seq param-keys)
-                                                           (p/make-params-layer param-keys param-types)
-                                                           p/set-params))
-         make-row-maker     (fn [result-types] (if (seq result-types)
-                                                 (r/make-columns-reader result-types)
-                                                 r/read-columns))
-         make-column-reader (fn [result-types] (if (seq result-types)
-                                                 (r/make-column-value-reader (first result-types) 1 nil)
-                                                 (fn [^ResultSet result-set] (r/read-column-value result-set 1))))
-         make-conn-worker   (fn [sql-tokens result-types] (if (or (seq result-types) (-> (first sql-tokens)
-                                                                                       str/trim
-                                                                                       str/lower-case
-                                                                                       (.startsWith "select")))
-                                                            query update))
-         sql-name               (gensym "sql-name-")}
+    :or {sql-name (gensym "sql-name-")}
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-tokens)
   (i/expected vector? "vector of result column types" result-types)
-  (let [sanitized-st (mapv (fn [token]
+  (let [make-params-setter (or make-params-setter
+                             (fn [param-keys param-types] (or params-setter
+                                                            (if (seq param-keys)
+                                                              (p/make-params-layer param-keys param-types)
+                                                              p/set-params))))
+        make-row-maker     (or make-row-maker
+                             (fn [result-types] (or row-maker
+                                                  (if (seq result-types)
+                                                    (r/make-columns-reader result-types)
+                                                    r/read-columns))))
+        make-column-reader (or make-column-reader
+                             (fn [result-types] (or column-reader
+                                                  (if (seq result-types)
+                                                    (r/make-column-value-reader (first result-types) 1 nil)
+                                                    (fn [^ResultSet result-set] (r/read-column-value result-set 1))))))
+        make-conn-worker   (or make-conn-worker
+                             (fn [sql-tokens result-types] (or conn-worker
+                                                             (if (or (seq result-types) (-> (first sql-tokens)
+                                                                                          str/trim
+                                                                                          str/lower-case
+                                                                                          (.startsWith "select")))
+                                                               (if result-set-worker
+                                                                 (partial query result-set-worker)
+                                                                 query)
+                                                               update))))
+        sanitized-st (mapv (fn [token]
                              (cond
                                (string? token)  token
                                (keyword? token) [token :nil]
