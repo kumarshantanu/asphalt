@@ -18,7 +18,7 @@
     * `:row-maker`
     * `:column-reader`
     * `:conn-worker`
-  * [TODO] Behave as arity-1 fn for SQL that accepts no params
+  * Make SQL templates behave as arity-1 fn for SQL that accepts no params
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
 * [TODO - BREAKING CHANGE] Make all type hints (even those with primitive Java types) null-safe for reads
   * Challenge: JDBC drivers do not implement this reliably, e.g.

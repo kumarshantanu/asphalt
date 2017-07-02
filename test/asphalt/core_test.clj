@@ -76,7 +76,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
     (let [generated-key (t-insert u/ds row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
     ;; retrieval test
-    (is (= 1 (t-count u/ds [])) "Verify that row was inserted")
+    (is (= 1 (t-count u/ds)) "Verify that row was inserted")
     (is (= (str jd1) (a/query a/fetch-single-value u/ds t-crosstype-select [])))
     (is (= [(str jd1)] (a/query a/fetch-single-row u/ds t-crosstype-select [])))
     (is (= [[(str jd1)]] (a/query a/fetch-rows u/ds t-crosstype-select [])))
@@ -107,7 +107,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
           generated-key (a/genkey params-setter a/fetch-single-value
                           u/ds t-insert row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
-    (is (= 1 (t-count u/ds [])) "Verify that row was inserted")
+    (is (= 1 (t-count u/ds)) "Verify that row was inserted")
     ;; retrieve
     (is (= vs1 (a/query a/fetch-single-row
                  u/ds t-select [])))
@@ -142,7 +142,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
     ;; create
     (let [generated-key (t-insert u/ds row)]
       (is (= 1 generated-key) "Verify that insertion generated a key"))
-    (is (= 1 (t-count u/ds [])) "Verify that row was inserted")
+    (is (= 1 (t-count u/ds)) "Verify that row was inserted")
     ;; retrieve
     (is (= vs1 (a/query a/fetch-single-row u/ds t-select [])))
     (is (= vs1 (a/query a/fetch-single-row u/ds t-selfew [(first vs1)])))
@@ -157,7 +157,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
     (is (= vs2 (a/query a/fetch-single-row u/ds t-select [])))
     ;; delete
     (a/update u/ds t-delete [])
-    (is (= 0 (t-count u/ds [])) "Verify that row was deleted")))
+    (is (= 0 (t-count u/ds)) "Verify that row was deleted")))
 
 
 (deftest test-rows
@@ -174,7 +174,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
     ;; 50 rows
     (dotimes [_ 50]
       (t-insert u/ds row))
-    (is (= 50 (t-count u/ds [])) "Verify that all rows were inserted")
+    (is (= 50 (t-count u/ds)) "Verify that all rows were inserted")
     (doseq [each (a/query a/fetch-rows
                    u/ds t-select [])]
       (is (= vs1 each)))
@@ -194,7 +194,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
                                      :joined :date]
                   (update-in params [:joined] p/date->cal :utc)))
       u/ds t-insert row)
-    (is (= 51 (t-count u/ds [])) "Verify that row was inserted")
+    (is (= 51 (t-count u/ds)) "Verify that row was inserted")
     ;; test set-params
     (a/update (fn [sql-source pstmt params]
                 (p/set-params pstmt [:name   :string
@@ -203,7 +203,7 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
                                      :joined :date]
                   (update-in params [:joined] p/date->cal :utc)))
       u/ds t-insert row)
-    (is (= 52 (t-count u/ds [])) "Verify that row was inserted")
+    (is (= 52 (t-count u/ds)) "Verify that row was inserted")
     ;; test fetch-maps
     (testing "fetch-maps"
       (let [rows (a/query a/fetch-maps
