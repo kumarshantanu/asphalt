@@ -2,16 +2,9 @@
 
 ## TODO and Ideas
 
-* [TODO] Function to support large result-sets: read a small subset of rows
-* [TODO] Fix documentation where a bad `:make-conn-worker` option value `a/genkey` is passed
-* [TODO] Overhaul documentation page
-* [TODO] In `defsql` and `compile-sql-template` accept options to use directly instead of their factory functions
-  * `:result-set-worker` (this has no corresponding factory fn)
-  * `:params-setter`
-  * `:row-maker`
-  * `:column-reader`
-  * `:conn-worker`
+* [TODO] Externalize `DataSource` instrumentation
 * [TODO] Support stored procedure call
+* [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
 * [TODO - BREAKING CHANGE] Make all type hints (even those with primitive Java types) null-safe for reads
   * Challenge: JDBC drivers do not implement this reliably, e.g.
@@ -20,7 +13,19 @@
   * Challenge: All connection pool libraries do not support this, e.g.
     * Apache DBCP 1.x does not implement JDBC 4.2, and by extension `ResultSet.getObject(int, Class)`
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
-* [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
+
+
+## [WIP] 0.6.1 / 2017-July-??
+
+* Enhance `defsql` and `compile-sql-template`
+  * Accept options for direct use instead of factory functions
+    * `:result-set-worker` (this has no corresponding factory fn)
+    * `:params-setter`
+    * `:row-maker`
+    * `:column-reader`
+    * `:conn-worker`
+  * Make SQL templates behave as arity-1 fn for SQL that accepts no params
+* Documentation fixes and enhancements
 
 
 ## 0.6.0 / 2017-February-20
