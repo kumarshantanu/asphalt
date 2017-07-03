@@ -235,8 +235,7 @@
     :column-reader (function arity-2, default: returns row vector)  fn to extract column value
     :fetch-size    (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
     :on-empty      (function arity-3, default: throws exception)    fn to handle the :on-empty event
-    :on-multi      (function arity-1, default: throws exception)    fn to handle the :on-multi event
-    "
+    :on-multi      (function arity-1, default: throws exception)    fn to handle the :on-multi event"
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {} sql-source result-set))
   ([{:keys [column-reader
