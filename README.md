@@ -131,7 +131,7 @@ SQL-templates defined with `defsql` are invokable as functions:
 ;; defsql infers connection worker as either update or query
 (sql-update conn-source {:new-salary 110000 :dept "Accounts"})
 
-;; for genkey we need to specify as such
+;; for genkey we need to specify the :conn-worker option as such
 (a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name, $salary, $dept)"
   {:conn-worker a/genkey})
 
