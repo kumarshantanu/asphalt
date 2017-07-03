@@ -2,6 +2,7 @@
 
 ## TODO and Ideas
 
+* [TODO] Externalize `DataSource` instrumentation
 * [TODO] Support stored procedure call
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
@@ -14,7 +15,7 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
-## [WIP] 0.7.0 / 2017-July-??
+## [WIP] 0.6.1 / 2017-July-??
 
 * Enhance `defsql` and `compile-sql-template`
   * Accept options for direct use instead of factory functions
