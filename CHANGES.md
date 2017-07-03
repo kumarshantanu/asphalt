@@ -15,7 +15,7 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
-## [WIP] 0.6.1 / 2017-July-??
+## 0.6.1 / 2017-July-04
 
 * Enhance `defsql` and `compile-sql-template`
   * Accept options for direct use instead of factory functions
