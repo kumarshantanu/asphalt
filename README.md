@@ -3,7 +3,7 @@
 A Clojure library for JDBC access.
 
 
-Features:
+## Why Asphalt?
 
 * [Simple](http://www.infoq.com/presentations/Simple-Made-Easy) (as in separation of concerns)
   * Extensible connection mechanism (via a protocol)
@@ -45,8 +45,12 @@ The following are supported by default:
   * `:factory` (fn that accepts a map and returns a JDBC connection)
   * `:classname` (JDBC driver classname), `:connection-uri` (JDBC URL string)
   * `:subprotocol` (sub-protocol portion of JDBC URL string), `:subname` (rest of the JDBC URL string)
-  * `:datasource` (`javax.sql.DataSource` instance), optional `:username` or `:user` (database user name), optional `:password` (database password)
-  * `:name` ([JNDI](https://en.wikipedia.org/wiki/Java_Naming_and_Directory_Interface) name), optional `:context` (`javax.naming.Context`), optional `:environment` (environment map)
+  * `:datasource` (`javax.sql.DataSource` instance) with following optional attributes
+    * `:username` or `:user` (database user name)
+    * `:password` (database password)
+  * `:name` ([JNDI](https://en.wikipedia.org/wiki/Java_Naming_and_Directory_Interface) name) with optional attributes
+    * `:context` (`javax.naming.Context`)
+    * `:environment` (environment map)
 * A JDBC URL string
 * JDBC datasource (`javax.sql.DataSource` instance)
 * JDBC connection (`java.sql.Connection` instance)
@@ -129,9 +133,12 @@ SQL-templates defined with `defsql` are invokable as functions:
 
 ;; for genkey we need to specify as such
 (a/defsql sql-insert "INSERT INTO emp (name, salary, dept) VALUES ($name, $salary, $dept)"
-  {:make-conn-worker a/genkey})
+  {:conn-worker a/genkey})
 
 (sql-insert conn-source {:name "Joe Coder" :salary 100000 :dept "Accounts"})
+
+;; same as above, but using positional params
+(sql-insert conn-source ["Joe Coder" 100000 "Accounts"])
 ```
 
 
