@@ -2,7 +2,6 @@
 
 ## TODO and Ideas
 
-* [TODO] Externalize `DataSource` instrumentation
 * [TODO] Support stored procedure call
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
@@ -13,6 +12,25 @@
   * Challenge: All connection pool libraries do not support this, e.g.
     * Apache DBCP 1.x does not implement JDBC 4.2, and by extension `ResultSet.getObject(int, Class)`
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
+
+
+## [TODO] 0.7.0 / 2017-July-??
+
+* [TODO] Externalize `DataSource` instrumentation
+* [TODO] Support for more JDBC types
+  * array
+  * ascii-stream
+  * binary-stream
+  * blob
+  * character-stream
+  * clob
+  * ncharacter-stream
+  * nclob
+  * ref
+  * row-id
+  * sql-xml
+  * unicode-stream
+  * url
 
 
 ## 0.6.1 / 2017-July-04
