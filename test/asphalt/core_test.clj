@@ -17,6 +17,7 @@
     [asphalt.type      :as t]
     [asphalt.transaction :as x])
   (:import
+    [java.io  ByteArrayInputStream InputStream]
     [java.sql Date SQLTimeoutException]
     [clojure.lang ExceptionInfo]))
 
@@ -36,7 +37,9 @@
 ;name   VARCHAR(50) NOT NULL,
 ;salary INT NOT NULL,
 ;dept   VARCHAR(50),
-;j_date DATE NOT NULL"
+;j_date DATE NOT NULL,
+;bio    CLOB,
+;pic    BLOB"
 
 
 ;; ----- templates -----
@@ -64,6 +67,13 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
 (a/defsql t-delete "DELETE FROM emp")
 
 (a/defsql t-batch-update "UPDATE emp SET salary = $new-salary WHERE id = $id")
+
+(a/defsql t-insert-lobs "INSERT INTO emp (name, salary, dept, j_date, bio, pic)
+VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined, ^ascii-stream $bio, ^binary-stream $pic)"
+  {:conn-worker a/genkey})
+
+(a/defsql t-select-lobs "SELECT ^ascii-stream bio, ^binary-stream pic FROM emp WHERE id = $id"
+  {:result-set-worker a/fetch-single-row})
 
 
 ;; ----- tests -----
@@ -275,3 +285,29 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worke
     (is (thrown? SQLTimeoutException
           (a/query (p/set-params-with-query-timeout 1) a/fetch-single-value
             u/delay-ds t-count [])) "Query should throw exception on delay")))
+
+
+(defn str->stream
+  ^InputStream
+  [^String s]
+  (ByteArrayInputStream. (.getBytes s)))
+
+
+(defn slurp-bytes
+  "Slurp the bytes from a slurpable thing"
+  [x]
+  (with-open [out (java.io.ByteArrayOutputStream.)]
+    (clojure.java.io/copy (clojure.java.io/input-stream x) out)
+    (.toByteArray out)))
+
+
+(deftest test-lobs
+  (let [jd1 (u/make-date)
+        bio "This is my bio"
+        pic [10 20 30]
+        vs  {:name "Joe" :salary 12345 :dept "Electrical"
+             :joined jd1 :bio (str->stream bio) :pic (ByteArrayInputStream. (byte-array pic))}
+        id  (t-insert-lobs u/ds vs)
+        [dbio dpic] (t-select-lobs u/ds {:id id})]
+    (is (= bio (slurp dbio)))
+    (is (= pic (vec (slurp-bytes dpic))))))

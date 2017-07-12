@@ -14,7 +14,7 @@
     [asphalt.type            :as t])
   (:import
     [java.util Calendar TimeZone]
-    [java.sql Date PreparedStatement Time Timestamp]))
+    [java.sql Array Date PreparedStatement Time Timestamp]))
 
 
 ;; ----- utility fns to turn (local) date/time/timestamp into another timezone -----

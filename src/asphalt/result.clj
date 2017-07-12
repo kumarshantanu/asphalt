@@ -14,7 +14,7 @@
     [asphalt.internal.iresult :as iresult]
     [asphalt.type             :as t])
   (:import
-    [java.sql Blob Clob ResultSet ResultSetMetaData]))
+    [java.sql Array Blob Clob ResultSet ResultSetMetaData]))
 
 
 ;; ----- read java.sql.ResultSet columns for known SQL types -----

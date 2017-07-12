@@ -2,6 +2,11 @@
 
 ## TODO and Ideas
 
+* [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
+  * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
+  * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
+* [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
+  * Drop support for `DataSource` instrumentation
 * [TODO] Support stored procedure call
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
@@ -16,21 +21,20 @@
 
 ## [TODO] 0.7.0 / 2017-July-??
 
-* [TODO] Externalize `DataSource` instrumentation
-* [TODO] Support for more JDBC types
-  * array
-  * ascii-stream
-  * binary-stream
-  * blob
-  * character-stream
-  * clob
-  * ncharacter-stream
-  * nclob
-  * ref
-  * row-id
-  * sql-xml
-  * unicode-stream
-  * url
+* Support for more JDBC column types
+  * `array`
+  * `ascii-stream`
+  * `big-decimal`
+  * `binary-stream`
+  * `blob`
+  * `character-stream`
+  * `clob`
+  * `ncharacter-stream`
+  * `nclob`
+  * `ref`
+  * `row-id`
+  * `sql-xml`
+  * `url`
 
 
 ## 0.6.1 / 2017-July-04

@@ -10,6 +10,8 @@
     name   VARCHAR(50) NOT NULL,
     salary INT NOT NULL,
     dept   VARCHAR(50),
-    j_date DATE
+    j_date DATE,
+    bio    CLOB,
+    pic    BLOB
 )"
  :drop-ddl "DROP TABLE emp"}
