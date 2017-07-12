@@ -19,7 +19,7 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
-## [TODO] 0.7.0 / 2017-July-??
+## [WIP] 0.6.2 / 2017-July-??
 
 * Support for more JDBC column types
   * `array`
