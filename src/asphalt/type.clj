@@ -43,55 +43,94 @@
 ;; Supported SQL types (aliases not included)
 ;
 ; :nil (implies dynamic discovery)
+; :array
+; :ascii-stream
+; :big-decimal
+; :binary-stream
+; :blob
 ; :boolean
 ; :byte
 ; :byte-array
+; :character-stream
+; :clob
 ; :date
 ; :double
 ; :float
 ; :int
 ; :long
+; :ncharacter-stream
+; :nclob
 ; :nstring
 ; :object
+; :ref
+; :row-id
 ; :string
+; :sql-xml
 ; :time
 ; :timestamp
+; :url
 
 
-(def single-typemap {nil         :object   ; default type hint
-                     :nil        :nil
-                     :bool       :boolean  ; alias for :boolean
-                     :boolean    :boolean
-                     :byte       :byte
-                     :byte-array :byte-array
-                     :date       :date
-                     :double     :double
-                     :float      :float
-                     :int        :int
-                     :integer    :int      ; alias for :int
-                     :long       :long
-                     :nstring    :nstring
-                     :object     :object
-                     :string     :string
-                     :time       :time
-                     :timestamp  :timestamp})
+(def single-typemap {nil                :object   ; default type hint
+                     :nil               :nil
+                     :array             :array
+                     :ascii-stream      :ascii-stream
+                     :big-decimal       :big-decimal
+                     :binary-stream     :binary-stream
+                     :blob              :blob
+                     :bool              :boolean  ; alias for :boolean
+                     :boolean           :boolean
+                     :byte              :byte
+                     :byte-array        :byte-array
+                     :character-stream  :character-stream
+                     :clob              :clob
+                     :date              :date
+                     :double            :double
+                     :float             :float
+                     :int               :int
+                     :integer           :int      ; alias for :int
+                     :long              :long
+                     :ncharacter-stream :ncharacter-stream
+                     :nclob             :nclob
+                     :nstring           :nstring
+                     :object            :object
+                     :ref               :ref
+                     :row-id            :row-id
+                     :string            :string
+                     :sql-xml           :sql-xml
+                     :time              :time
+                     :timestamp         :timestamp
+                     :url               :url})
 
 
-(def multi-typemap {:bools       :boolean  ; alias for :booleans
-                    :booleans    :boolean
-                    :bytes       :byte
-                    :byte-arrays :byte-array
-                    :dates       :date
-                    :doubles     :double
-                    :floats      :float
-                    :ints        :int
-                    :integers    :int      ; alias for :ints
-                    :longs       :long
-                    :nstrings    :nstring
-                    :objects     :object
-                    :strings     :string
-                    :times       :time
-                    :timestamps  :timestamp})
+(def multi-typemap {:arrays             :array
+                    :ascii-streams      :ascii-stream
+                    :big-decimals       :big-decimal
+                    :binary-streams     :binary-stream
+                    :blobs              :blob
+                    :bools              :boolean  ; alias for :booleans
+                    :booleans           :boolean
+                    :bytes              :byte
+                    :byte-arrays        :byte-array
+                    :character-streams  :character-stream
+                    :clobs              :clob
+                    :dates              :date
+                    :doubles            :double
+                    :floats             :float
+                    :ints               :int
+                    :integers           :int      ; alias for :ints
+                    :longs              :long
+                    :ncharacter-streams :ncharacter-stream
+                    :nclobs             :nclob
+                    :nstrings           :nstring
+                    :objects            :object
+                    :refs               :ref
+                    :row-ids            :row-id
+                    :strings            :string
+                    :sql-xmls           :sql-xml
+                    :times              :time
+                    :timestamps         :timestamp
+                    :urls               :url})
 
 
 (def all-typemap (merge single-typemap multi-typemap))

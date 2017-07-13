@@ -353,21 +353,49 @@
   * sql-tokens is a vector of alternating string and param-pair vectors
   * param-pair is a vector of two elements [param-key param-type] (param keys are used to extract map params)
   * result-types is a vector of result types
+  Options:
+  :sql-name         (auto generated)  name of the SQL statement
+  :escape-char      (default: \\)     escape character in the SQL to avoid interpretation
+  :param-start-char (default: $)      character to mark the beginning of a named param
+  :type-start-char  (default: ^)      character to mark the beginning of a type hint
+  :param-types      (parsed from SQL) vector of param-type keywords
+  :result-types     (parsed from SQL) vector of result-type keywords
   See:
     `compile-sql-template` to compile a SQL template for efficiency/enhancement
     asphalt.type for supported SQL types."
   ([^String sql]
     (parse-sql sql {}))
-  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char name-encoder]
+  ([^String sql {:keys [sql-name escape-char param-start-char type-start-char
+                        param-types result-types]
                  :or {sql-name sql escape-char \\ param-start-char \$ type-start-char \^}
                  :as options}]
-    (let [[sql-tokens result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
-      [(reduce (fn [st token] (conj st (if (string? token)
-                                         token
-                                         (let [[pname ptype] token]
-                                           [(isql/encode-name pname) (isql/encode-param-type sql ptype)]))))
-         [] sql-tokens)
-       (mapv (partial isql/encode-result-type sql) result-types)])))
+    (when param-types
+      (i/expected vector? "vector of SQL param types" param-types)
+      (doseq [ptype param-types]
+        (i/expected #(contains? t/all-typemap %) "valid SQL param type" ptype)))
+    (when result-types
+      (i/expected vector? "vector of SQL result types" result-types)
+      (doseq [rtype result-types]
+        (i/expected #(contains? t/single-typemap %) "valid SQL result type" rtype)))
+    (let [[sql-tokens parsed-result-types]  (isql/parse-sql-str sql escape-char param-start-char type-start-char)]
+      (let [parsed-param-pairs (filter coll? sql-tokens)]
+        (when (and param-types (not= (count param-types) (count parsed-param-pairs)))
+          (i/expected (format "specified param-types %s (%d) and inferred param-types %s (%d) to be of same length"
+                        param-types parsed-param-pairs))))
+      [(->> sql-tokens
+         (reduce (fn [[^long pindex st] token] (if (string? token)
+                                                 [pindex (conj st token)]
+                                                 [(inc pindex) (conj st (let [[pname ptype] token]
+                                                                          [(isql/encode-name pname)
+                                                                           (isql/encode-param-type sql
+                                                                             (if param-types
+                                                                               (nth param-types pindex)
+                                                                               ptype))]))]))
+           [0 []])
+         second)
+       (->> parsed-result-types
+         (or result-types)
+         (mapv (partial isql/encode-result-type sql)))])))
 
 
 (defn compile-sql-template

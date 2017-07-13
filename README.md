@@ -27,7 +27,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.6.1"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Leiningen coordinates: `[asphalt "0.6.2-SNAPSHOT"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
@@ -165,24 +165,37 @@ appropriate types are used when communicating with the JDBC driver.
 
 The following types are supported as type hints:
 
-| Type       | Comments             | Multi-value | Result on NULL |
-|------------|----------------------|-------------|----------------|
-|`nil`       |Dynamic/slow discovery| none        | `nil`   |
-|`bool`      |Duplicate of `boolean`|`bools`      | `false` |
-|`boolean`   |                      |`booleans`   | `false` |
-|`byte`      |                      |`bytes`      | `0`     |
-|`byte-array`|                      |`byte-arrays`| `nil`   |
-|`date`      |                      |`dates`      | `nil`   |
-|`double`    |                      |`doubles`    | `0.0`   |
-|`float`     |                      |`floats`     | `0.0`   |
-|`int`       |                      |`ints`       | `0`     |
-|`integer`   |Duplicate of `int`    |`integers`   | `0`     |
-|`long`      |                      |`longs`      | `0`     |
-|`nstring`   |                      |`nstrings`   | `nil`   |
-|`object`    |Catch-all type        |`objects`    | `nil`   |
-|`string`    |                      |`strings`    | `nil`   |
-|`time`      |                      |`times`      | `nil`   |
-|`timestamp` |                      |`timestamps` | `nil`   |
+| Type              | Comments             | Multi-value        | Result on NULL |
+|-------------------|----------------------|--------------------|----------------|
+|`nil`              |Dynamic/slow discovery| none               | `nil`   |
+|`array`            |                      |`arrays`            | `nil`   |
+|`ascii-stream`     |                      |`ascii-streams`     | `nil`   |
+|`big-decimal`      |                      |`big-decimals`      | `nil`   |
+|`binary-stream`    |                      |`binary-streams`    | `nil`   |
+|`blob`             |                      |`blobs`             | `nil`   |
+|`bool`             |Duplicate of `boolean`|`bools`             | `false` |
+|`boolean`          |                      |`booleans`          | `false` |
+|`byte`             |                      |`bytes`             | `0`     |
+|`byte-array`       |                      |`byte-arrays`       | `nil`   |
+|`character-stream` |                      |`character-stream`  | `nil`   |
+|`clob`             |                      |`clobs`             | `nil`   |
+|`date`             |                      |`dates`             | `nil`   |
+|`double`           |                      |`doubles`           | `0.0`   |
+|`float`            |                      |`floats`            | `0.0`   |
+|`int`              |                      |`ints`              | `0`     |
+|`integer`          |Duplicate of `int`    |`integers`          | `0`     |
+|`long`             |                      |`longs`             | `0`     |
+|`ncharacter-stream`|                      |`ncharacter-streams`| `nil`   |
+|`nclob`            |                      |`nclobs`            | `nil`   |
+|`nstring`          |                      |`nstrings`          | `nil`   |
+|`object`           |Catch-all type        |`objects`           | `nil`   |
+|`ref`              |                      |`refs`              | `nil`   |
+|`row-id`           |                      |`row-ids`           | `nil`   |
+|`string`           |                      |`strings`           | `nil`   |
+|`sql-xml`          |                      |`sql-xmls`          | `nil`   |
+|`time`             |                      |`times`             | `nil`   |
+|`timestamp`        |                      |`timestamps`        | `nil`   |
+|`url`              |                      |`urls`              | `nil`   |
 
 Note on type hints in result columns:
 - Primitive type hints for result columns coerce `NULL` value as primitive default values as shown in the table.
@@ -197,8 +210,8 @@ Note on multi-value types:
 
 #### Caveats with SQL-template type hints
 
-- Type hints are optional at each param level. However, when type-hinting the result columns in a query you should
-  either type-hint every column, or not specify type-hints for any column at all.
+- Type hints are optional at each param level.
+- When type-hinting result columns in a query either type-hint every column, or do not type-hint any column at all.
 - Wildcards (e.g. `SELECT *`) in return columns are tricky to use with return column type hints. You should hint
   every return column type as in `SELECT * ^int ^string ^int ^date` if the return columns are of that type.
 - Queries that use `UNION` are also tricky to use with return column type hints. You should hint only one set of

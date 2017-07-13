@@ -2,7 +2,11 @@
 
 ## TODO and Ideas
 
-* [TODO] Externalize `DataSource` instrumentation
+* [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
+  * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
+  * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
+* [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
+  * Drop support for `DataSource` instrumentation
 * [TODO] Support stored procedure call
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
@@ -13,6 +17,27 @@
   * Challenge: All connection pool libraries do not support this, e.g.
     * Apache DBCP 1.x does not implement JDBC 4.2, and by extension `ResultSet.getObject(int, Class)`
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
+
+
+## [WIP] 0.6.2 / 2017-July-??
+
+* Enhance `defsql` and `parse-sql` with extra options
+  * `:param-types`
+  * `:result-types`
+* Support for more JDBC column types
+  * `array`
+  * `ascii-stream`
+  * `big-decimal`
+  * `binary-stream`
+  * `blob`
+  * `character-stream`
+  * `clob`
+  * `ncharacter-stream`
+  * `nclob`
+  * `ref`
+  * `row-id`
+  * `sql-xml`
+  * `url`
 
 
 ## 0.6.1 / 2017-July-04
