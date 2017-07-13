@@ -19,7 +19,7 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
-## [WIP] 0.6.2 / 2017-July-??
+## 0.6.2 / 2017-July-13
 
 * Enhance `defsql` and `parse-sql` with extra options
   * `:param-types`

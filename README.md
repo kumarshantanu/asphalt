@@ -27,7 +27,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Leiningen coordinates: `[asphalt "0.6.2-SNAPSHOT"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Clojars coordinates: `[asphalt "0.6.2"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
