@@ -21,6 +21,9 @@
 
 ## [WIP] 0.6.2 / 2017-July-??
 
+* Enhance `defsql` and `parse-sql` with extra options
+  * `:param-types`
+  * `:result-types`
 * Support for more JDBC column types
   * `array`
   * `ascii-stream`
