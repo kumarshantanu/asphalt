@@ -13,9 +13,9 @@
 
 
 (defprotocol IConnectionSource
-  (create-connection            [this] "Create connection from the source")
-  (obtain-connection            [this] "Obtain connection from the source")
-  (return-connection [this connection] "Return connection to the source"))
+  (^Connection create-connection [this] "Create connection from the source")
+  (^Connection obtain-connection [this] "Obtain connection from the source")
+  (return-connection  [this connection] "Return connection to the source"))
 
 
 (defprotocol ISqlSource
