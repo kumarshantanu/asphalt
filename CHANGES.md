@@ -19,6 +19,12 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
+## [WIP] 0.6.3 / 2017-August-??
+
+- [TODO] Allow `:param-placeholder` option (default `?`) in `defsql` for named parameters
+  - Useful for muti-value params, e.g. `IN (^objects $ids)` -> `IN (UNHEX(?), UNHEX(?))`
+
+
 ## 0.6.2 / 2017-July-13
 
 * Enhance `defsql` and `parse-sql` with extra options
