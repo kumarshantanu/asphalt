@@ -37,15 +37,43 @@
   "SELECT ^string name, ^int age, ^date joined FROM emp WHERE dept_id=^int $dept-id AND level IN (^ints $levels)")
 
 
+(a/defsql find-selected-employees "SELECT name, age, joined FROM emp WHERE id IN (^objects $ids)"
+  {:param-placeholder {:ids "UNHEX(?)"}})
+
+
 (deftest test-defsql
   (is (= "SELECT name, age, joined FROM emp WHERE dept_id=?"
         (t/get-sql find-employees-by-dept {:dept-id 20})))
   (is (= "SELECT name, age, joined FROM emp WHERE dept_id=? AND level IN (?, ?, ?)"
         (t/get-sql find-employees-by-level {:dept-id 20
-                                            :levels [10 20 30]}))))
+                                            :levels [10 20 30]})))
+  (is (= "SELECT name, age, joined FROM emp WHERE id IN (UNHEX(?), UNHEX(?), UNHEX(?))"
+        (t/get-sql find-selected-employees {:ids ["abcd" "bcde" "cdef"]}))))
 
 
 (deftest test-parse-sql
   (is (= (a/parse-sql sql-find-employees-by-dept)
         (a/parse-sql sql-find-employees-by-dept-badhints {:param-types [:int]
                                                           :result-types [:string :int :date]}))))
+
+
+(deftest test-compile-sql-template
+  (as-> "SELECT * FROM emp WHERE id = $id" <>
+    (a/parse-sql <>)
+    (conj <> {})
+    (apply a/compile-sql-template <>))
+  (is (thrown? IllegalArgumentException
+       (as-> "SELECT * FROM emp WHERE id = $id" <>
+         (a/parse-sql <>)
+         (conj <> {:param-placeholder {:id "?"}})
+         (apply a/compile-sql-template <>))))
+  (is (thrown? IllegalArgumentException
+       (as-> "SELECT * FROM emp WHERE id IN (^objects $ids) and dept_id = $dept-id" <>
+         (a/parse-sql <>)
+         (conj <> {:param-placeholder {:id "?"}})
+         (apply a/compile-sql-template <>))))
+  (is (thrown? IllegalArgumentException
+       (as-> "SELECT * FROM emp WHERE id IN (^objects $ids) and dept_id = $dept-id" <>
+         (a/parse-sql <>)
+         (conj <> {:param-placeholder {:dept-id "?"}})
+         (apply a/compile-sql-template <>)))))

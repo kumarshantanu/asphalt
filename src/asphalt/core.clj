@@ -402,12 +402,15 @@
   "Given a SQL template (SQL tokens and result types) compile it into a more efficient SQL source with the following
   enhancements:
     * associated params-setter
+    * param placeholder for named, multi-value params
+    * associated result-set-worker
     * associated row-maker
     * associated column-reader
     * associated conn-worker
     * act as arity-2 function (f conn-source params)
   Options:
     :result-set-worker  (fn [sql-source result-set])         - used when :make-conn-worker auto-defaults to query
+    :param-placeholder  map {:param-name placeholder-string} - override placeholder ? for named multi-value params
     :params-setter      (fn [prepared-stmt params])          - used when :make-params-setter not specified
     :row-maker          (fn [result-set col-count])          - used when :make-row-maker not specified
     :column-reader      (fn [result-set])                    - used when :make-column-reader not specified
@@ -421,6 +424,7 @@
     `parse-sql` for SQL-template format"
   [sql-tokens result-types
    {:keys [result-set-worker
+           param-placeholder
            params-setter
            row-maker
            column-reader
@@ -470,30 +474,40 @@
                                                   token)
                                :otherwise       (i/expected "string, param key or key/type vector" token)))
                        sql-tokens)]
-    (let [kt-pairs (filter vector? sanitized-st)]
+    (let [kt-pairs (filter vector? sanitized-st)
+          kt-map   (zipmap (map first kt-pairs) (map second kt-pairs))]
       (if (->> kt-pairs
            (map second)
            (every? (partial contains? t/single-typemap)))
-       (isql/->StaticSqlTemplate
-         (i/as-str sql-name)
-         (isql/make-sql sanitized-st (vec (repeat (count kt-pairs) nil)))
-         (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
-         (make-row-maker result-types)
-         (make-column-reader result-types)
-         (make-conn-worker sanitized-st result-types))
-       (isql/->DynamicSqlTemplate
-         (i/as-str sql-name)
-         (reduce (fn [st token] (cond
-                                  (and (string? token) (string? (last st))) (conj (pop st) (str (last st) token))
-                                  (and (vector? token) (string? (last st))
-                                    (contains? t/single-typemap (second     ; pre-convert single value params to '?'
-                                                                  token)))  (conj (pop st) (str (last st) \?))
-                                  :otherwise                                (conj st token)))
-           [] sanitized-st)
-         (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
-         (make-row-maker result-types)
-         (make-column-reader result-types)
-         (make-conn-worker sanitized-st result-types))))))
+        (do
+          (i/expected empty? "option :param-placeholder only for named multi-value params" param-placeholder)
+          (isql/->StaticSqlTemplate
+            (i/as-str sql-name)
+            (isql/make-sql sanitized-st nil (vec (repeat (count kt-pairs) nil)))
+            (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
+            (make-row-maker result-types)
+            (make-column-reader result-types)
+            (make-conn-worker sanitized-st result-types)))
+        (isql/->DynamicSqlTemplate
+          (i/as-str sql-name)
+          (reduce (fn shrink-template [st token]
+                    (cond
+                      (and (string? token) (string? (last st))) (conj (pop st) (str (last st) token))
+                      (and (vector? token) (string? (last st))
+                        (contains? t/single-typemap (second     ; pre-convert single value params to '?'
+                                                      token)))  (conj (pop st) (str (last st) \?))
+                      :otherwise                                (conj st token)))
+            [] sanitized-st)
+          (reduce-kv (fn [m k v]
+                       (i/expected #(contains? t/multi-typemap (get kt-map %))
+                         "only multi-value params in option :param-placeholder" k)
+                       (i/expected string? "param placeholder string" v)
+                       (assoc m k (memoize (fn [^long n] (str/join ", " (repeat n v))))))
+            {} param-placeholder)
+          (make-params-setter (mapv first kt-pairs) (mapv second kt-pairs))
+          (make-row-maker result-types)
+          (make-column-reader result-types)
+          (make-conn-worker sanitized-st result-types))))))
 
 
 (defmacro defsql

@@ -187,8 +187,10 @@
 
 
 (defn make-sql
+  "Given SQL template tokens, param-placeholder functions {:param-key (fn [n]) -> placeholders-string} and SQL params,
+  generate the SQL string."
   ^String
-  [sql-tokens params]
+  [sql-tokens cached-param-placeholder params]
   (let [^StringBuilder sb (StringBuilder.)]
     (i/each-indexed [i 0
                      token sql-tokens]
@@ -198,7 +200,9 @@
           (if (contains? t/multi-typemap param-type)
             (let [k (if (vector? params) i param-key)]
               (if (contains? params k)
-                (.append sb ^String (cached-qmarks (count (get params k))))
+                (if-let [cached-holder (get cached-param-placeholder param-key)]
+                  (.append sb ^String (cached-holder (count (get params k))))
+                  (.append sb ^String (cached-qmarks (count (get params k)))))
                 (i/illegal-arg "No value found for key:" k "in" (pr-str params))))
             (.append sb \?)))))
     (.toString sb)))
@@ -252,12 +256,12 @@
 
 
 (defrecord DynamicSqlTemplate
-  [^String sql-name sql-tokens param-setter row-maker column-reader connection-worker]
+  [^String sql-name sql-tokens placeholder-fns param-setter row-maker column-reader connection-worker]
   clojure.lang.Named
   (getNamespace [_] nil)
   (getName      [_] sql-name)
   t/ISqlSource
-  (get-sql    [this params] (make-sql sql-tokens params))
+  (get-sql    [this params] (make-sql sql-tokens placeholder-fns params))
   (set-params [this prepared-stmt params] (param-setter prepared-stmt params))
   (read-col   [this result-set] (column-reader result-set))
   (read-row   [this result-set col-count] (row-maker result-set col-count))
@@ -301,7 +305,7 @@
   ;;============
   java.util.List
   ;;============
-  (get-sql    [this params] (make-sql (first this) params))
+  (get-sql    [this params] (make-sql (first this) nil params))
   (set-params [this prepared-stmt params] (if-let [kt-pairs (seq (filter vector? (first this)))]
                                             (p/set-params prepared-stmt
                                               (mapv first kt-pairs) (mapv second kt-pairs) params)

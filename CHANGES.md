@@ -21,7 +21,7 @@
 
 ## [WIP] 0.6.3 / 2017-August-??
 
-- [TODO] Allow `:param-placeholder` option (default `?`) in `defsql` for named parameters
+- Allow `:param-placeholder` option in `defsql` for named multi-value parameters
   - Useful for muti-value params, e.g. `IN (^objects $ids)` -> `IN (UNHEX(?), UNHEX(?))`
 
 
