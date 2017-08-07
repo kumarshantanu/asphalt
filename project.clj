@@ -20,7 +20,7 @@
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :dln {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.4"]
-                                   [org.clojure/java.jdbc "0.7.0-beta2"]]
+                                   [org.clojure/java.jdbc "0.7.0"]]
                     :test-paths ["perf"]}
              :dbcp  {:test-paths ["test-connpool/dbcp"]  :dependencies [[clj-dbcp "0.8.2"]]}
              :dbcp2 {:test-paths ["test-connpool/dbcp2"] :dependencies [[clj-dbcp "0.9.0"]]}
