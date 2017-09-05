@@ -23,7 +23,7 @@
   * `:column-reader`
 
 
-## [WIP] 0.6.4 / 2017-September-??
+## 0.6.4 / 2017-September-05
 
 - Deprecate `asphalt.core/instrument-connection-source`
 
