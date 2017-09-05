@@ -5,7 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :java-source-paths ["java-src"]
   :javac-options ["-target" "1.7" "-source" "1.7" "-Xlint:-options"]
-  :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.10"]
+  :profiles {:dev {:dependencies [[org.clojure/tools.nrepl "0.2.12"]
                                   [simple-jndi "0.11.4.1"]
                                   [com.h2database/h2 "1.3.176"]]}
              :provided {:dependencies [[org.clojure/clojure "1.6.0"]
@@ -16,11 +16,11 @@
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :c18 {:dependencies [[org.clojure/clojure "1.8.0"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
-             :c19 {:dependencies [[org.clojure/clojure "1.9.0-alpha17"]]
+             :c19 {:dependencies [[org.clojure/clojure "1.9.0-alpha19"]]
                    :global-vars {*unchecked-math* :warn-on-boxed}}
              :dln {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.4"]
-                                   [org.clojure/java.jdbc "0.7.0"]]
+                                   [org.clojure/java.jdbc "0.7.1"]]
                     :test-paths ["perf"]}
              :dbcp  {:test-paths ["test-connpool/dbcp"]  :dependencies [[clj-dbcp "0.8.2"]]}
              :dbcp2 {:test-paths ["test-connpool/dbcp2"] :dependencies [[clj-dbcp "0.9.0"]]}
