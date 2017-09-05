@@ -19,6 +19,18 @@
   * [TODO] Deprecate/Remove support for primitive type hints (int, float, long, double, boolean)
 
 
+## [WIP] 0.6.4 / 2017-September-??
+
+- [TODO] Deprecate the entire instrumentation API
+  - [TODO] Factor out connection-source instrumentation into a sub-module using Preflex 0.3.0
+- [TODO] Optional kwarg `:wrapper` in `defsql` to execute the SQL operation in
+- [TODO] Add dummy connection-source and SQL-source to help with mocking/unit testing
+- [TODO] Fix arity of kwarg fns in `asphalt.core/compile-sql-template` (by extension, `defsql`)
+  - `:params-setter`
+  - `:row-maker`
+  - `:column-reader`
+
+
 ## 0.6.3 / 2017-August-07
 
 - Allow `:param-placeholder` option in `defsql` for named multi-value parameters
