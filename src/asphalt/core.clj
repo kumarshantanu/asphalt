@@ -28,7 +28,8 @@
 
 
 (defn instrument-connection-source
-  "Make instrumented connection source using connection-creation, statement-creation and SQL-execution listeners.
+  "DEPRECATED: Alternate implementation to be provided in a future vesion.
+  Make instrumented connection source using connection-creation, statement-creation and SQL-execution listeners.
 
   Option :conn-creation corresponds to a map containing the following fns, triggered when JDBC connections are created:
   ;; event = :jdbc-connection-creation-event
@@ -48,7 +49,8 @@
    :on-success (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])
    :on-error   (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event ^Exception error])
    :lastly     (fn [^String id ^long nanos ^asphalt.type.SQLExecutionEvent event])}"
-  {:added "0.4.0"}
+  {:added "0.4.0"
+   :deprecated "0.6.4"}
   [connection-source {:keys [conn-creation stmt-creation sql-execution]
                       :or {conn-creation JdbcEventListener/NOP
                            stmt-creation JdbcEventListener/NOP
