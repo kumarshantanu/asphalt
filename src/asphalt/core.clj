@@ -521,7 +521,15 @@
   ([var-symbol sql options]
     (when-not (symbol? var-symbol)
       (i/expected "a symbol" var-symbol))
-    `(def ~var-symbol (let [opts# (merge {:sql-name ~(name var-symbol)} ~options)]
-                        (->> opts#
-                          (conj (parse-sql ~sql opts#))
-                          (apply compile-sql-template ))))))
+    (let [sql-template  (eval sql)
+          assoc-missing (fn [m k v] (if (contains? m k)
+                                      m
+                                      (assoc m k v)))
+          defn-var-sym  (-> var-symbol
+                          (vary-meta assoc-missing :arglists ''([connection-source] [connection-source params]))
+                          (vary-meta assoc-missing :doc      sql-template))]
+      `(def ~defn-var-sym
+         (let [opts# (merge {:sql-name ~(name var-symbol)} ~options)]
+           (->> opts#
+             (conj (parse-sql ~sql-template opts#))
+             (apply compile-sql-template )))))))

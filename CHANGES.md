@@ -30,8 +30,9 @@
 
 ## [WIP] 0.6.5 / 2017-September-??
 
-- [TODO] Add `:arglists` metadata in `defsql` to make it look like created with `defn`
-  - Makes `defsql` compatibile with [DIME](https://github.com/kumarshantanu/dime)
+- Enhance `defsql` with metadata to make it behave more like `defn`
+  - Add `:arglists` metadata key (makes it compatibile with [DIME](https://github.com/kumarshantanu/dime))
+  - Add `:doc` metadata key with value same as the specified SQL template
 - [TODO] Enhance docstring to clarify fn args (instead of just arity)
 
 
