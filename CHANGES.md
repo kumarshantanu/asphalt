@@ -5,6 +5,11 @@
 * [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
   * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
   * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
+* [TODO] Fix/revamp rationale in README
+* [TODO] Support for defining a row-maker using defrecord: `defrowrecord` or `defrowmaker`
+* [TODO] Support for multi-value param groups
+  * `:group-placeholder`, e.g. `{:values "(?, ?, ?)"}` or `{:values "(^int $foo, ^boolean $bar, $baz)"}`
+  * Support for multi-insert, e.g. `INSERT INTO emp (c1, c2) VALUES (v1, v2), (v3, v4), (v5, v6);`
 * [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
   * Drop support for `DataSource` instrumentation
 * [TODO] Support stored procedure call
@@ -21,6 +26,13 @@
   * `:params-setter`
   * `:row-maker`
   * `:column-reader`
+
+
+## [WIP] 0.6.5 / 2017-September-??
+
+- [TODO] Add `:arglists` metadata in `defsql` to make it look like created with `defn`
+  - Makes `defsql` compatibile with [DIME](https://github.com/kumarshantanu/dime)
+- [TODO] Enhance docstring to clarify fn args (instead of just arity)
 
 
 ## 0.6.4 / 2017-September-05
