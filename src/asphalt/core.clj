@@ -120,8 +120,10 @@
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a collection of rows as maps. It is required
   for asphalt.type.ISqlSource/read-row to return a vector of all column values for the sql-source.
   Options:
-    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
-    :key-maker  (arity-1 fn, default: asphalt.result/label->key) converts column label to column key"
+  Key          Type/spec            Default                    Description
+  ----         ----------           --------                   ------------
+  :fetch-size  positive integer     not applied                fetch-size to be set on java.sql.ResultSet
+  :key-maker   (fn [^String label]) asphalt.result/label->key  converts column label to column key"
   ([sql-source ^ResultSet result-set]
     (fetch-maps {} sql-source result-set))
   ([{:keys [fetch-size
@@ -155,9 +157,12 @@
 (defn fetch-rows
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a vector of rows.
   Options:
-    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
-    :max-rows   (positive integer, default: not applied)         max result rows to read
-    :row-maker  (function arity-3, default: returns row vector)  fn to build row by extracting column values"
+  Key          Type/spec                               Default      Description
+  ----         ----------                              --------     ------------
+  :fetch-size  positive integer                        not applied  fetch-size to set on java.sql.ResultSet
+  :max-rows    positive integer                        not applied  max result rows to read
+  :row-maker   (fn [sql-source result-set col-count])  returns vector of col values
+                                                                    fn to make a row from column values"
   ([sql-source ^ResultSet result-set]
     (fetch-rows {} sql-source result-set))
   ([{:keys [fetch-size
@@ -187,10 +192,13 @@
 (defn fetch-single-row
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row.
   Options:
-    :fetch-size (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
-    :on-empty   (function arity-3, default: throws exception)    fn to handle the :on-empty event
-    :on-multi   (function arity-1, default: throws exception)    fn to handle the :on-multi event
-    :row-maker  (function arity-3, default: returns row vector)  fn to build row by extracting column values"
+  Key          Type/spec                              Default           Description
+  ----         ----------                             --------          ------------
+  :fetch-size  positive integer                       not applied       fetch-size to set on java.sql.ResultSet
+  :on-empty    (fn [sql-source result-set])           throws exception  fn to handle the :on-empty event
+  :on-multi    (fn [sql-source result-set row])       throws exception  fn to handle the :on-multi event
+  :row-maker   (fn [sql-source result-set col-count]) returns vector of column values
+                                                                        fn to make a row from column values"
   ([sql-source ^ResultSet result-set]
     (fetch-single-row {} sql-source result-set))
   ([{:keys [fetch-size
@@ -220,8 +228,12 @@
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single row if one exists, nil (or specified
   default) otherwise.
   Options:
-    :default (any value) default value to return when no row is found
-    (see `fetch-single-row` for other options)"
+  Key       Type/spec   Default   Description
+  ----      ----------  --------  ------------
+  :default  any value   nil       default value to return when no row is found
+
+  See also:
+  `fetch-single-row` for other options"
   ([sql-source ^ResultSet result-set]
     (fetch-single-row {:on-empty r/nil-on-empty} sql-source result-set))
   ([{:keys [default]
@@ -234,10 +246,12 @@
 (defn fetch-single-value
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value.
   Options:
-    :column-reader (function arity-2, default: returns row vector)  fn to extract column value
-    :fetch-size    (positive integer, default: not applied)         fetch-size to be set on java.sql.ResultSet
-    :on-empty      (function arity-3, default: throws exception)    fn to handle the :on-empty event
-    :on-multi      (function arity-1, default: throws exception)    fn to handle the :on-multi event"
+  Key             Type/spec                               Default            Description
+  ----            ----------                              --------           ------------
+  :column-reader  (fn [sql-source result-set])            returns col value  fn to extract column value
+  :fetch-size     positive integer                        not applied        fetch-size to be set on java.sql.ResultSet
+  :on-empty       (fn [sql-source result-set])            throws exception   fn to handle the :on-empty event
+  :on-multi       (fn [sql-source result-set col-value])  throws exception   fn to handle the :on-multi event"
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {} sql-source result-set))
   ([{:keys [column-reader
@@ -265,8 +279,12 @@
   "Given asphalt.type.ISqlSource and java.sql.ResultSet instances fetch a single column value if one exists, nil (or
   specified default) otherwise.
   Options:
-    :default (any value) default value to return when no row is found
-    (see `fetch-single-value` for other supported options)"
+  Key       Type/spec   Default   Description
+  ----      ----------  --------  ------------
+  :default  any value   nil       default value to return when no row is found
+
+  See also:
+  `fetch-single-value` for other supported options"
   ([sql-source ^ResultSet result-set]
     (fetch-single-value {:on-empty r/nil-on-empty} sql-source result-set))
   ([{:keys [default]

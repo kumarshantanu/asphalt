@@ -34,7 +34,7 @@
   - Add `:arglists` metadata key (for better documentation and meta-programming support)
   - Add `:doc` metadata key with value same as the specified SQL template
   - Add arity to accommodate docstring: `(defsql foo docstring sql options)`
-- [TODO] Enhance docstring to clarify fn args (instead of just arity)
+- Clarify optional function-argument arity in `asphalt.core` functions docstring
 
 
 ## 0.6.4 / 2017-September-05
