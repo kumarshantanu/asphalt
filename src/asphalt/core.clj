@@ -513,14 +513,13 @@
 
 
 (defmacro defsql
-  "Define a parsed/compiled SQL template that can be used to execute it later."
+  "Define a parsed/compiled SQL template that can be used to execute the SQL later. The defined template may be invoked
+  like a function (fn [connection-source] [connection-source params])."
   ([var-symbol sql]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
+    (i/expected symbol? "a symbol" var-symbol)
     `(defsql ~var-symbol ~sql {}))
   ([var-symbol sql options]
-    (when-not (symbol? var-symbol)
-      (i/expected "a symbol" var-symbol))
+    (i/expected symbol? "a symbol" var-symbol)
     (let [sql-template  (eval sql)
           assoc-missing (fn [m k v] (if (contains? m k)
                                       m
@@ -532,4 +531,8 @@
          (let [opts# (merge {:sql-name ~(name var-symbol)} ~options)]
            (->> opts#
              (conj (parse-sql ~sql-template opts#))
-             (apply compile-sql-template )))))))
+             (apply compile-sql-template))))))
+  ([var-symbol docstring sql options]
+    (i/expected symbol? "a symbol" var-symbol)
+    (i/expected string? "a docstring" docstring)
+    `(defsql ~(vary-meta var-symbol assoc :doc docstring) ~sql ~options)))
