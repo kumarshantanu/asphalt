@@ -35,6 +35,7 @@
   - Add `:doc` metadata key with value same as the specified SQL template
   - Add arity to accommodate docstring: `(defsql foo docstring sql options)`
 - Clarify optional function-argument arity in `asphalt.core` functions docstring
+- Throw exception when connection-source map is not valid
 
 
 ## 0.6.4 / 2017-September-05

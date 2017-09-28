@@ -284,7 +284,8 @@
                                                                                (and environment
                                                                                  (Hashtable. ^Map environment))))
                                                                 ^DataSource d (.lookup c ^String name)]
-                                                            (.getConnection d)))))
+                                                            (.getConnection d))
+                                     :otherwise           (expected "a valid connection-source map" this))))
   (return-connection [this conn] (when-not (:connection this)
                                    (.close ^Connection conn))))
 
