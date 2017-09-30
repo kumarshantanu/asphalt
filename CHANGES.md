@@ -28,7 +28,7 @@
   * `:column-reader`
 
 
-## [WIP] 0.6.5 / 2017-September-??
+## 0.6.5 / 2017-September-30
 
 - Enhance `defsql` with arity and metadata to make it behave more like `defn`
   - Add `:arglists` metadata key (for better documentation and meta-programming support)

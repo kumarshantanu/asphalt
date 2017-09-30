@@ -14,10 +14,6 @@ A Clojure library for JDBC access.
 * Performance and Control
   * Aspects can be overridden independent of each other
   * Support for type hints in SQL
-* Instrumentation support (deprecated)
-  * Making connection
-  * Making statement
-  * Executing SQL
 * Rich transaction support
   * Transaction propagation (borrowed from EJB, Spring)
   * Fine-grained control over commit and rollback
@@ -27,7 +23,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Clojars coordinates: `[asphalt "0.6.4"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Clojars coordinates: `[asphalt "0.6.5"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
