@@ -128,11 +128,12 @@
 
 
 (defn as-str
+  "Turn anything into string."
   ^String [x]
   (if (named? x)
-    (->> [(namespace x) (name x)]
-      (remove nil?)
-      (str/join "/"))
+    (if-let [nss (namespace x)]
+      (str nss \/ (name x))
+      (name x))
     (str x)))
 
 
