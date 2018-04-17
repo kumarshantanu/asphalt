@@ -72,6 +72,7 @@
                (when-not (contains? ~params-sym each-key#)
                  (i/expected (str "key " each-key# " to be present in SQL params") ~params-sym))))
          ~@(->> (map vector param-types param-keys)
+             (remove #(contains? t/zero-typemap (first %)))  ; zerotype is not a param
              (map-indexed (fn [^long idx [t k]]
                             (iparam/lay-param-expr prepared-stmt-sym t
                               (if (vector? indices-exp)  ; indices-exp is vector for single params, S-expr otherwise
@@ -148,7 +149,8 @@
                       (recur (unchecked-inc i))))
                   (recur (unchecked-add pi m) (next ks) (next ts)))
                 (do
-                  (iparam/set-param-value prepared-stmt t pi v)
+                  (when-not (contains? t/zero-typemap t)  ; not non-param?
+                    (iparam/set-param-value prepared-stmt t pi v))
                   (recur (unchecked-inc pi) (next ks) (next ts)))))
             (i/illegal-arg "No value found for key:" k "in" (pr-str params))))))))
 

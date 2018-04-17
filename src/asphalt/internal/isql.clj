@@ -197,13 +197,23 @@
       (if (string? token)
         (.append sb ^String token)
         (let [[param-key param-type] token]
-          (if (contains? t/multi-typemap param-type)
+          (cond
+            ;; multi-value params
+            (contains? t/multi-typemap param-type)
             (let [k (if (vector? params) i param-key)]
               (if (contains? params k)
                 (if-let [cached-holder (get cached-param-placeholder param-key)]
                   (.append sb ^String (cached-holder (count (get params k))))
                   (.append sb ^String (cached-qmarks (count (get params k)))))
                 (i/illegal-arg "No value found for key:" k "in" (pr-str params))))
+            ;; non-params
+            (contains? t/zero-typemap param-type)
+            (let [k (if (vector? params) i param-key)]
+              (if (contains? params k)
+                (.append sb (i/as-str (get params k)))
+                (i/illegal-arg "No value found for key:" k "in" (pr-str params))))
+            ;; single-value params
+            :otherwise
             (.append sb \?)))))
     (.toString sb)))
 

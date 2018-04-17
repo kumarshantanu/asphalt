@@ -71,6 +71,9 @@
 ; :url
 
 
+(def zero-typemap {:sql :sql})
+
+
 (def single-typemap {nil                :object   ; default type hint
                      :nil               :nil
                      :array             :array
@@ -133,7 +136,7 @@
                     :urls               :url})
 
 
-(def all-typemap (merge single-typemap multi-typemap))
+(def all-typemap (merge zero-typemap single-typemap multi-typemap))
 
 
 (defrecord StmtCreationEvent [^String sql

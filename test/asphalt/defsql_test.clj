@@ -41,6 +41,10 @@
   {:param-placeholder {:ids "UNHEX(?)"}})
 
 
+(a/defsql insert-into-specified-table
+  "INSERT INTO ^sql $table (foo, bar) VALUES ($foo, $bar)")
+
+
 (deftest test-defsql
   (is (= "SELECT name, age, joined FROM emp WHERE dept_id=?"
         (t/get-sql find-employees-by-dept {:dept-id 20})))
@@ -48,7 +52,11 @@
         (t/get-sql find-employees-by-level {:dept-id 20
                                             :levels [10 20 30]})))
   (is (= "SELECT name, age, joined FROM emp WHERE id IN (UNHEX(?), UNHEX(?), UNHEX(?))"
-        (t/get-sql find-selected-employees {:ids ["abcd" "bcde" "cdef"]}))))
+        (t/get-sql find-selected-employees {:ids ["abcd" "bcde" "cdef"]})))
+  (is (= "INSERT INTO generic (foo, bar) VALUES (?, ?)"
+        (t/get-sql insert-into-specified-table {:table :generic
+                                                :foo "foo"
+                                                :bar "bar"}))))
 
 
 (deftest test-parse-sql
