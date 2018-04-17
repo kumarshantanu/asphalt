@@ -2,6 +2,8 @@
 
 ## TODO and Ideas
 
+* [TODO] Support for statement preparation parameters, e.g. when using cursors
+  * https://rymndhng.github.io/blog/2018/02/24/clojure-jdbc-resultset-cursors/
 * [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
   * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
   * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
@@ -10,6 +12,8 @@
 * [TODO] Support for multi-value param groups
   * `:group-placeholder`, e.g. `{:values "(?, ?, ?)"}` or `{:values "(^int $foo, ^boolean $bar, $baz)"}`
   * Support for multi-insert, e.g. `INSERT INTO emp (c1, c2) VALUES (v1, v2), (v3, v4), (v5, v6);`
+  * Support for group patterns, e.g. `WHERE (foo, bar) IN ((10, 20), (30, 40), (50, 60))`
+    * `IN (^multi (^int $foo, ^string $bar))`
 * [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
   * Drop support for `DataSource` instrumentation
 * [TODO] Support stored procedure call
@@ -26,6 +30,15 @@
   * `:params-setter`
   * `:row-maker`
   * `:column-reader`
+- https://github.com/bitemyapp/blackwater
+- https://github.com/arthurblake/log4jdbc
+- https://github.com/ttddyy/datasource-proxy
+
+
+## [WIP] 0.6.6 / 2018-April-??
+
+* [TODO] Support for non-param variables (for SQL generation) via type hint
+  * Example: `SELECT foo FROM ^sql $table WHERE id = $id`
 
 
 ## 0.6.5 / 2017-September-30
