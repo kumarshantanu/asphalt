@@ -23,7 +23,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Clojars coordinates: `[asphalt "0.6.5"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Clojars coordinates: `[asphalt "0.6.6"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
@@ -156,6 +156,20 @@ SQL-templates let you optionally specify the types of params and also the result
 The operations on the type-hinted SQL-templates remain the same as non type-hinted SQL templates, but internally the
 appropriate types are used when communicating with the JDBC driver.
 
+Starting with version `0.6.6`, dynamic non-parameter variable substitution is supported. See the snippet below:
+
+```clojure
+;; notice the ^sql type hint
+(a/defsql insert-into
+  "INSERT INTO ^sql $table (id, dept) VALUES ($id, $dept)")
+
+;; value is passed like normal parameters
+(insert-into conn-source {:table "emp_697"
+                          :id "F69-2239-AX"
+                          :dept "Accounts"})
+
+;; the above SQL is treated as: INSERT INTO emp_697 (id, dept) VALUES ($id, $dept)
+```
 
 #### Supported type hints
 
@@ -163,6 +177,7 @@ The following types are supported as type hints:
 
 | Type              | Comments             | Multi-value        | Result on NULL |
 |-------------------|----------------------|--------------------|----------------|
+|`sql`              |Non-param substitution| none               | not applicable |
 |`nil`              |Dynamic/slow discovery| none               | `nil`   |
 |`array`            |                      |`arrays`            | `nil`   |
 |`ascii-stream`     |                      |`ascii-streams`     | `nil`   |
@@ -283,7 +298,7 @@ Running performance benchmarks: `lein with-profile c18,dev,dbcp,perf test`
 
 ## License
 
-Copyright © 2015-2017 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
+Copyright © 2015-2018 Shantanu Kumar (kumar.shantanu@gmail.com, shantanu.kumar@concur.com)
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

@@ -35,7 +35,7 @@
 - https://github.com/ttddyy/datasource-proxy
 
 
-## [WIP] 0.6.6 / 2018-April-??
+## 0.6.6 / 2018-April-18
 
 * Support for non-param variables (for SQL generation) via type hint
   * Example: `SELECT foo FROM ^sql $table WHERE id = $id`
