@@ -37,7 +37,7 @@
 
 ## [WIP] 0.6.7 / 2018-April-??
 
-* [Todo] Fix issue where multi-value params may include non-collection
+* Throw exception when a non-collection is passed as multi-value param
 * [Todo] Fix issue where templates with `^sql` variable cannot set JDBC params
 
 

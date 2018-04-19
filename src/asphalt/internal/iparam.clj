@@ -60,11 +60,14 @@
     (let [multi-counts (map-indexed (fn [^long idx pt]
                                       (if (contains? t/single-typemap pt)
                                         `1
-                                        `(count (get ~params-sym ~(get param-keys-vec idx)))))
+                                        `(let [pk# ~(get param-keys-vec idx)
+                                               vs# (get ~params-sym pk#)]
+                                           (i/expected coll? (str "multi-value collection against param key " pk#) vs#)
+                                           (count vs#))))
                          param-types-vec)]
       `(reduce (fn [cv# ^long pcount#]
                  (conj cv# (unchecked-add (int (last cv#)) pcount#)))
-         (vector-of :int 1)
+         (vector-of :int 1)  ; JDBC param index begins at 1
          [~@multi-counts]))))
 
 
