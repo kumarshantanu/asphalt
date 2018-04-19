@@ -35,6 +35,12 @@
 - https://github.com/ttddyy/datasource-proxy
 
 
+## [WIP] 0.6.7 / 2018-April-??
+
+* [Todo] Fix issue where multi-value params may include non-collection
+* [Todo] Fix issue where templates with `^sql` variable cannot set JDBC params
+
+
 ## 0.6.6 / 2018-April-18
 
 * Support for non-param variables (for SQL generation) via type hint
