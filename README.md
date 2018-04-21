@@ -23,7 +23,7 @@ A Clojure library for JDBC access.
 
 ## Usage
 
-Clojars coordinates: `[asphalt "0.6.6"]` (requires Java 7 or higher, Clojure 1.6 or higher)
+Clojars coordinates: `[asphalt "0.6.7"]` (requires Java 7 or higher, Clojure 1.6 or higher)
 
 ```clojure
 (require '[asphalt.core :as a])        ; for most common operations
