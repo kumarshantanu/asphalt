@@ -458,10 +458,22 @@
     :as options}]
   (i/expected vector? "vector of SQL template tokens" sql-tokens)
   (i/expected vector? "vector of result column types" result-types)
-  (let [make-params-setter (or make-params-setter
+  (let [split-into-halves  (fn [coll] (-> (count coll)
+                                        (bit-shift-right 1)  ; divide by two
+                                        (split-at coll)))
+        make-params-setter (or make-params-setter
                              (fn [param-keys param-types] (or params-setter
                                                             (if (seq param-keys)
-                                                              (p/make-params-layer param-keys param-types)
+                                                              (if (some #(not (contains? t/zero-typemap %)) param-keys)
+                                                                (if (= (count param-keys) (count param-types))
+                                                                  (->> (map vector param-keys param-types)
+                                                                    (remove #(contains? t/zero-typemap (second %)))
+                                                                    (apply interleave)
+                                                                    split-into-halves
+                                                                    (map vec)
+                                                                    (apply p/make-params-layer))
+                                                                  (p/make-params-layer param-keys param-types))
+                                                                p/set-params)
                                                               p/set-params))))
         make-row-maker     (or make-row-maker
                              (fn [result-types] (or row-maker

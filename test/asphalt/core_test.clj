@@ -50,6 +50,9 @@
 (a/defsql t-insert "INSERT INTO emp (name, salary, dept, j_date)
 VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worker a/genkey})
 
+(a/defsql t-insert-np "INSERT INTO ^sql $emp-table (name, salary, dept, j_date)
+VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined)" {:conn-worker a/genkey})
+
 (a/defsql t-select "SELECT ^string name, -- ^int age,
 -- ^boolean gender,
 ^int salary, ^string dept, ^date j_date FROM emp")
@@ -168,6 +171,15 @@ VALUES (^string $name, ^int $salary, ^string $dept, ^date $joined, ^ascii-stream
     ;; delete
     (a/update u/ds t-delete [])
     (is (= 0 (t-count u/ds)) "Verify that row was deleted")))
+
+
+(deftest test-non-params
+  (let [jd1 (u/make-date)
+        vs1 ["Joe Coder" 100000 "Accounts" jd1]
+        row (zipmap [:name :salary :dept :joined] vs1)
+        generated-key (t-insert-np u/ds (assoc row :emp-table "emp"))]
+    (is (= 1 generated-key) "Verify that insertion generated a key")
+    (is (= 1 (t-count u/ds)) "Verify that row was inserted")))
 
 
 (deftest test-rows
