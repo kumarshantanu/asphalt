@@ -4,9 +4,6 @@
 
 * [TODO] Support for statement preparation parameters, e.g. when using cursors
   * https://rymndhng.github.io/blog/2018/02/24/clojure-jdbc-resultset-cursors/
-* [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
-  * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
-  * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
 * [TODO] Fix/revamp rationale in README
 * [TODO] Support for defining a row-maker using defrecord: `defrowrecord` or `defrowmaker`
 * [TODO] Support for multi-value param groups
@@ -14,8 +11,6 @@
   * Support for multi-insert, e.g. `INSERT INTO emp (c1, c2) VALUES (v1, v2), (v3, v4), (v5, v6);`
   * Support for group patterns, e.g. `WHERE (foo, bar) IN ((10, 20), (30, 40), (50, 60))`
     * `IN (^multi (^int $foo, ^string $bar))`
-* [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
-  * Drop support for `DataSource` instrumentation
 * [TODO] Support stored procedure call
 * [TODO] Remove protocol fn `asphalt.type.ISqlSource/read-col` (supplant with `read-row`)
 * [TODO] Support for more parameter types, e.g. `utc-date`, `utc-time`, `utc-timestamp`
@@ -33,6 +28,24 @@
 - https://github.com/bitemyapp/blackwater
 - https://github.com/arthurblake/log4jdbc
 - https://github.com/ttddyy/datasource-proxy
+
+
+## [WIP] 0.7.0 / 2018-October-??
+
+- [Todo] Add entity abstraction/API
+  - [Todo] In-memory impl
+  - [Todo] SQL impl
+    - [Todo] Generic
+    - [Todo] MySQL
+    - [Todo] PostgreSQL
+    - [Todo] Oracle
+    - [Todo] SQL Server
+- [Todo - BREAKING CHANGE] Require Clojure 1.7 or higher (for `volatile!`)
+* [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
+  * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
+  * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
+* [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
+  * Drop support for `DataSource` instrumentation
 
 
 ## 0.6.7 / 2018-April-21
