@@ -28,9 +28,12 @@
 - https://github.com/bitemyapp/blackwater
 - https://github.com/arthurblake/log4jdbc
 - https://github.com/ttddyy/datasource-proxy
+- [Todo] Entity
+  - [Todo] Optimized multi-insert
+  - [Todo] Calculated fields as SQL templates (fragments) in queries
 
 
-## [WIP] 0.7.0 / 2018-October-??
+## [WIP] 0.7.0 / 2018-November-??
 
 - [Todo] Add entity abstraction/API
   - [Todo] In-memory impl
@@ -40,12 +43,14 @@
     - [Todo] PostgreSQL
     - [Todo] Oracle
     - [Todo] SQL Server
-- [Todo - BREAKING CHANGE] Require Clojure 1.7 or higher (for `volatile!`)
+- Require Clojure 1.7 or higher (for `volatile!` and `update`)
+- Add `asphalt.core/sqlcat` function to concatenate SQL template tokens/fragments
 * [TODO - BREAKING CHANGE] Make `params-setter` accept `connection` argument
   * From `(fn [sql-source pstmt params])` to `(fn [conn sql-source pstmt params])`
   * Related issue: https://github.com/kumarshantanu/asphalt/issues/6
 * [TODO - BREAKING CHANGE] Externalize Connection-source instrumentation
   * Drop support for `DataSource` instrumentation
+* [Todo - BREAKING CHANGE] Extract/return all generated keys at once (genkey)
 
 
 ## 0.6.7 / 2018-April-21

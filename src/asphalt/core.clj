@@ -368,6 +368,27 @@
 ;;  [:string :int :date]]
 
 
+(defn sqlcat
+  "Concatenate SQL template tokens/fragments into a vector."
+  ([tokens]
+    (sqlcat [] tokens))
+  ([result tokens]
+    (reduce (fn [template token]
+              (condp i/invoke token
+                string?     (if (string? (last template))
+                              (clojure.core/update template (dec (count template)) str token)
+                              (conj template token))
+                keyword?    (conj template [token (get t/all-typemap nil)])
+                sequential? (if (and (#{1 2} (count token))
+                                  (keyword? (first token))
+                                  (contains? t/all-typemap (second token)))
+                              (conj template [(first token) (get t/all-typemap (second token))])
+                              (sqlcat template token))
+                nil?        template
+                (i/expected "string, keyword or vector token in template" token)))
+      result tokens)))
+
+
 (defn parse-sql
   "Given a SQL statement with embedded parameter names return a two-element vector [sql-tokens result-types] where
   * sql-tokens is a vector of alternating string and param-pair vectors
