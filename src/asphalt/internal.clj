@@ -143,6 +143,11 @@
     [x]))
 
 
+(defn invoke
+  [f & args]
+  (apply f args))
+
+
 ;; ----- type definitions -----
 
 
