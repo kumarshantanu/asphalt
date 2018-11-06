@@ -17,7 +17,7 @@
              :c07 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :c08 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :c09 {:dependencies [[org.clojure/clojure "1.9.0"]]}
-             :c10 {:dependencies [[org.clojure/clojure "1.10.0-beta4"]]}
+             :c10 {:dependencies [[org.clojure/clojure "1.10.0-beta5"]]}
              :dln {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.4"]
                                    [org.clojure/java.jdbc "0.7.1"]]
