@@ -136,6 +136,9 @@
                     :urls               :url})
 
 
+(def multi-revmap (zipmap (vals multi-typemap) (keys multi-typemap)))
+
+
 (def all-typemap (merge zero-typemap single-typemap multi-typemap))
 
 

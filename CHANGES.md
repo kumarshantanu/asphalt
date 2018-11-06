@@ -31,14 +31,16 @@
 - [Todo] Entity
   - [Todo] Optimized multi-insert
   - [Todo] Calculated fields as SQL templates (fragments) in queries
+    - BETWEEN
+    - IN
 
 
 ## [WIP] 0.7.0 / 2018-November-??
 
-- [Todo] Add entity abstraction/API
-  - [Todo] In-memory impl
-  - [Todo] SQL impl
-    - [Todo] Generic
+- [WIP] Add entity abstraction/API
+  - In-memory impl
+  - [WIP] SQL impl
+    - [WIP] Generic
     - [Todo] MySQL
     - [Todo] PostgreSQL
     - [Todo] Oracle
