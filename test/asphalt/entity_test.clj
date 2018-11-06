@@ -12,7 +12,9 @@
     [clojure.test :refer [deftest is testing use-fixtures]]
     [asphalt.entity :as e]
     [asphalt.entity.type :as t]
-    [asphalt.test-util :as u]))
+    [asphalt.test-util :as u])
+  (:import
+    [java.sql SQLException]))
 
 
 (def mem-repo (atom {}))
@@ -47,20 +49,32 @@
 
 
 (deftest test-entity-create
-  (testing "happy"
-    (let [emp {:id 10
-               :name "Munna Marwah"
-               :salary 1000}]
+  (let [emp {:id 10
+             :name "Munna Marwah"
+             :salary 1000}]
+    (testing "happy"
       (is (= 1
             (e/create-entity mem-repo employee emp)
             (e/create-entity u/orig-ds employee emp)))
       (is (= 1
             (e/count-entities mem-repo employee)
-            (e/count-entities u/orig-ds employee)) "row count should match")))
-  (testing "negative"
-    (is (thrown? IllegalArgumentException
-          (e/create-entity mem-repo employee {:id 20})) "required fields missing")
-    ))
+            (e/count-entities u/orig-ds employee)) "row count should match"))
+    (testing "negative - missing required fields"
+      (is (thrown? IllegalArgumentException
+            (e/create-entity mem-repo employee {:id 20})) "required fields missing")
+      (is (thrown? IllegalArgumentException
+            (e/create-entity u/orig-ds employee {:id 20})) "required fields missing")
+      (is (= 1
+            (e/count-entities mem-repo employee)
+            (e/count-entities u/orig-ds employee)) "row count should match"))
+    (testing "negative - duplicate primary key"
+      (is (thrown? IllegalArgumentException
+            (e/create-entity mem-repo employee emp)) "duplicate primary key")
+      (is (thrown? SQLException
+            (e/create-entity u/orig-ds employee emp)) "duplicate primary key")
+      (is (= 1
+            (e/count-entities mem-repo employee)
+            (e/count-entities u/orig-ds employee)) "row count should match"))))
 
 
 (deftest test-entity-genkey)

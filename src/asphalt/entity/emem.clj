@@ -123,6 +123,17 @@
                         {} (.-fields entity)))))
 
 
+(defn conjv-row
+  "Append given row to an all-rows vector after verifying the new row does not violate unique keys."
+  [all-rows ^Entity entity new-row]
+  (let [kset (.-keyset entity)]
+    (doseq [f-id kset]
+      (let [f-val (f-id new-row)]
+        (when (.contains ^Collection (mapv f-id all-rows) f-val)
+          (i/expected (format "field %s to be unique in entity %s" f-id (.-id entity)) f-val))))
+    (conjv all-rows new-row)))
+
+
 (extend-protocol et/IRepo
   clojure.lang.IAtom
   (r-genkey [this entity row]  (let [row (ensure-fields entity row)
@@ -142,8 +153,7 @@
   (r-insert [this entity row]  (let [row (ensure-fields entity row)
                                      [final-row _] (row-with-generated-fields entity row)]
                                  (swap! this update (.-id ^Entity entity)
-                                   conjv
-                                   (first (row-with-generated-fields entity final-row)))
+                                   conjv-row entity final-row)
                                  1))
   (r-multin [this entity rows] (let [gvec (transient [])
                                      rows (mapv #(ensure-fields entity %) rows)]
