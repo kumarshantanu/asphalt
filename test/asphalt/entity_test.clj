@@ -91,23 +91,33 @@
 
 (deftest test-entity-query
   (testing "happy"
-    (let [emp {:id 10
-               :name "Munna Marwah"
-               :salary 1000}]
-      (is (= 1
-            (e/create-entity mem-repo employee emp)
-            (e/create-entity u/orig-ds employee emp)))
-      (is (= [{:id 10
-               :name "Munna Marwah"
-               :salary 1000
-               :doj nil
-               :dept nil
-               :bio nil
-               :pic nil}]
+    (let [emp1 {:id 10
+                :name "Munna Marwah"
+                :salary 1000}
+          emp2 {:id 15
+               :name "Naresh Nishchal"
+               :salary 2000}
+          emp3 {:id 20
+               :name "Pappu Puniya"
+               :salary 3000}
+          xtra {:doj nil
+                :dept nil
+                :bio nil
+                :pic nil}]
+      (doseq [each [emp1 emp2 emp3]]
+        (is (= 1
+              (e/create-entity mem-repo employee each)
+              (e/create-entity u/orig-ds employee each))))
+      (is (= [(merge emp1 xtra)
+              (merge emp2 xtra)
+              (merge emp3 xtra)]
             (e/query-entities mem-repo employee)
-            (e/query-entities u/orig-ds employee)) "fetched row should have all fields, even optional")
-      (is (= [{:id 10
-               :name "Munna Marwah"
-               :salary 1000}]
-            (e/query-entities mem-repo employee {:fields [:id :name :salary]})
+            (e/query-entities u/orig-ds employee))
+        "fetched row should have all fields, even optional")
+      (is (= [(merge emp1 xtra)
+              (merge emp3 xtra)]
+            (e/query-entities mem-repo employee  {:where [:or [:= :id 10] [:= :id 20]]})
+            (e/query-entities u/orig-ds employee {:where [:or [:= :id 10] [:= :id 20]]})) "WHERE clause")
+      (is (= [emp1 emp2 emp3]
+            (e/query-entities mem-repo employee  {:fields [:id :name :salary]})
             (e/query-entities u/orig-ds employee {:fields [:id :name :salary]})) "select fields"))))
