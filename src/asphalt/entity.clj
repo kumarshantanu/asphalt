@@ -147,3 +147,12 @@
                          :as options}]
     (i/expected t/entity? "an entity" entity)
     (t/r-query repo entity options)))
+
+
+(defn count-entities
+  ([repo ^Entity entity]
+    (count-entities repo entity {}))
+  ([repo ^Entity entity {:keys [where]
+                         :as options}]
+    (i/expected t/entity? "an entity" entity)
+    (t/r-count repo entity options)))

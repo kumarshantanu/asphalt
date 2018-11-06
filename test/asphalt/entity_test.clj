@@ -15,11 +15,16 @@
     [asphalt.test-util :as u]))
 
 
+(def mem-repo (atom {}))
+
+
 (defn test-fixture
   [f]
+  (reset! mem-repo {})
   (u/create-db)
   (f)
-  (u/drop-db))
+  (u/drop-db)
+  (reset! mem-repo {}))
 
 
 (use-fixtures :each test-fixture)
@@ -37,9 +42,6 @@
    {:id :pic     :type :blob}])
 
 
-(def mem-repo (atom {}))
-
-
 (deftest test-entity-construction
   (is (t/entity? employee) "entity created"))
 
@@ -51,18 +53,10 @@
                :salary 1000}]
       (is (= 1
             (e/create-entity mem-repo employee emp)
-            (e/create-entity u/orig-ds employee {:id 10
-                                                 :name "Munna Marwah"
-                                                 :salary 1000})))
-      (is (= [{:id 10
-               :name "Munna Marwah"
-               :salary 1000
-               :doj nil
-               :dept nil
-               :bio nil
-               :pic nil}]
-            (e/query-entities mem-repo employee)
-            (e/query-entities u/orig-ds employee)) "fetched row should have all fields, even optional")))
+            (e/create-entity u/orig-ds employee emp)))
+      (is (= 1
+            (e/count-entities mem-repo employee)
+            (e/count-entities u/orig-ds employee)) "row count should match")))
   (testing "negative"
     (is (thrown? IllegalArgumentException
           (e/create-entity mem-repo employee {:id 20})) "required fields missing")
@@ -81,4 +75,25 @@
 (deftest test-entity-delete)
 
 
-(deftest test-entity-query)
+(deftest test-entity-query
+  (testing "happy"
+    (let [emp {:id 10
+               :name "Munna Marwah"
+               :salary 1000}]
+      (is (= 1
+            (e/create-entity mem-repo employee emp)
+            (e/create-entity u/orig-ds employee emp)))
+      (is (= [{:id 10
+               :name "Munna Marwah"
+               :salary 1000
+               :doj nil
+               :dept nil
+               :bio nil
+               :pic nil}]
+            (e/query-entities mem-repo employee)
+            (e/query-entities u/orig-ds employee)) "fetched row should have all fields, even optional")
+      (is (= [{:id 10
+               :name "Munna Marwah"
+               :salary 1000}]
+            (e/query-entities mem-repo employee {:fields [:id :name :salary]})
+            (e/query-entities u/orig-ds employee {:fields [:id :name :salary]})) "select fields"))))

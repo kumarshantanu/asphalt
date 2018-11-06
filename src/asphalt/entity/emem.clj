@@ -188,7 +188,19 @@
                                    (| where    filter #(where? where %))
                                    (| order-by sort-by (fn [row] (mapv row order-by)))
                                    (| limit    take limit)
-                                   (| fields   map #(select-keys % fields)))))
+                                   (| fields   map #(select-keys % fields))
+                                   vec)))
+  (r-count  [this entity opts] (let [{:keys [where]} opts
+                                     | (fn [param f & more]
+                                         (if param
+                                           (apply f more)
+                                           (last more)))
+                                     default (default-vals entity)]
+                                 (i/expected et/entity? "an entity" entity)
+                                 (->> (get @this (.-id ^Entity entity))
+                                   (map #(merge default %))
+                                   (| where    filter #(where? where %))
+                                   count)))
   (r-delete [this entity opts] (let [{:keys [where]} opts]
                                  (swap! this update (.-id ^Entity entity)
                                    (fn [rows]

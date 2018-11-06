@@ -20,6 +20,7 @@
   (r-update [this entity subst opts] "Update entities")
   (r-upsert [this entity row]        "Insert/update entities - not supported by all repos")
   (r-query  [this entity opts]       "Query entities")
+  (r-count  [this entity opts]       "Count entities")
   (r-delete [this entity opts]       "Delete entities"))
 
 

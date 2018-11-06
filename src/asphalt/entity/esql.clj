@@ -191,7 +191,7 @@
                                :f-ids []
                                :types []}))
           [wh-tokens
-           wh-params] (when where (where-tokens where))]
+           wh-params] (when where (where-tokens entity where))]
       [(a/sqlcat
          ["SELECT "
           (comma-separated names)
@@ -208,6 +208,21 @@
        types])))
 
 
+(defn count-template
+  [^Entity entity {:keys [where]
+                   :as opts}]
+  (let [all-fields (.-fields entity)
+        all-keyset (.-keyset entity)]
+    (i/expected et/entity? "an entity" entity)
+    (let [[wh-tokens
+           wh-params] (when where (where-tokens entity where))]
+      [(a/sqlcat
+         ["SELECT COUNT(*) FROM "
+          (.-name entity)
+          (when where [" WHERE " wh-tokens])])
+       (conj {} wh-params)])))
+
+
 (defn sql-genkey [conn-source entity row]        "Insert entity, returning generated keys")
 (defn sql-multgk [conn-source entity rows]       "Insert multiple entities, returning generated keys")
 (defn sql-insert [conn-source entity row]        (let [template (insert-template entity (set (keys row)))]
@@ -221,6 +236,9 @@
                                                                             (->> (apply at/read-row args)
                                                                               (zipmap f-ids)))})
                                                      conn-source [tokens return] params)))
+(defn sql-count  [conn-source entity opts]       (let [[tokens params] (count-template entity opts)]
+                                                   (a/query a/fetch-single-value
+                                                     conn-source [tokens [:long]] params)))
 (defn sql-delete [conn-source entity opts]       "Delete entities")
 
 
@@ -233,6 +251,7 @@
   (r-update [this entity subst opts] "Update entities")
   (r-upsert [this entity row]        "Insert/update entities - not supported by all repos")
   (r-query  [this entity opts]       (sql-query this entity opts))
+  (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   javax.sql.DataSource
   (r-genkey [this entity row]        "Insert entity, returning generated keys")
@@ -242,6 +261,7 @@
   (r-update [this entity subst opts] "Update entities")
   (r-upsert [this entity row]        "Insert/update entities - not supported by all repos")
   (r-query  [this entity opts]       (sql-query this entity opts))
+  (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   java.util.Map
   (r-genkey [this entity row]        "Insert entity, returning generated keys")
@@ -251,6 +271,7 @@
   (r-update [this entity subst opts] "Update entities")
   (r-upsert [this entity row]        "Insert/update entities - not supported by all repos")
   (r-query  [this entity opts]       (sql-query this entity opts))
+  (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   TxnConnectionSource
   (r-genkey [this entity row]        "Insert entity, returning generated keys")
@@ -260,4 +281,5 @@
   (r-update [this entity subst opts] "Update entities")
   (r-upsert [this entity row]        "Insert/update entities - not supported by all repos")
   (r-query  [this entity opts]       (sql-query this entity opts))
+  (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities"))
