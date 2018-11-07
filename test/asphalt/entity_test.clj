@@ -117,7 +117,19 @@
       (is (= [(merge emp1 xtra)
               (merge emp3 xtra)]
             (e/query-entities mem-repo employee  {:where [:or [:= :id 10] [:= :id 20]]})
-            (e/query-entities u/orig-ds employee {:where [:or [:= :id 10] [:= :id 20]]})) "WHERE clause")
+            (e/query-entities u/orig-ds employee {:where [:or [:= :id 10] [:= :id 20]]}))
+        "WHERE clause")
       (is (= [emp1 emp2 emp3]
             (e/query-entities mem-repo employee  {:fields [:id :name :salary]})
-            (e/query-entities u/orig-ds employee {:fields [:id :name :salary]})) "select fields"))))
+            (e/query-entities u/orig-ds employee {:fields [:id :name :salary]}))
+        "select fields")
+      (is (= [(merge emp3 xtra)
+              (merge emp2 xtra)
+              (merge emp1 xtra)]
+            (e/query-entities mem-repo employee  {:order [[:id :desc]]})
+            (e/query-entities u/orig-ds employee {:order [[:id :desc]]}))
+        "ORDER BY - one field")
+;      (is false "ORDER BY - two fields, ASC and DESC")
+;      (is false "LIMIT")
+;      (is false "OFFSET")
+      )))

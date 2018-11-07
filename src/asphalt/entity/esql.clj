@@ -160,10 +160,22 @@
                            :FIXME))))
 
 
+(defn as-order-field
+  [^Entity entity order]
+  (i/expected et/entity? "an entity" entity)
+  (if (vector? order)
+    (let [fields (.-fields entity)]
+      (i/expected #(i/count= 2 %) "vector of two elements [field-id :asc|:desc]" order)
+      (i/expected fields          "first element of order to be a field-ID" (first order))
+      (i/expected #{:asc :desc}   "second element of order to be :asc or :desc" (second order))
+      (update order 1 #(if (= :asc %) " ASC" " DESC")))
+    (as-order-field entity [order :asc])))
+
+
 (defn query-template
   [^Entity entity {:keys [fields
                           where
-                          order-by
+                          order
                           offset
                           limit]
                    :as opts}]
@@ -175,9 +187,6 @@
       (doseq [each fields]
         (i/expected all-fields
           (str "query field to be one of the field IDs " (keys all-fields)) each)))
-    (when (some? order-by)
-      (doseq [each order-by]
-        (i/expected all-fields "order-by field to be among entity fields" each)))
     (let [{:keys [names
                   f-ids
                   types]} (->> (if fields
@@ -197,11 +206,12 @@
           (comma-separated names)
           " FROM "
           (.-name entity)
-          (when where    [" WHERE " wh-tokens])
-          (when order-by [" ORDER BY " (->> order-by
-                                         (mapv all-fields)
-                                         (mapv #(.-name ^Field %))
-                                         comma-separated)])
+          (when where [" WHERE " wh-tokens])
+          (when order [" ORDER BY " (->> order
+                                      (map #(as-order-field entity %))
+                                      (mapv (fn [[f-id ostr]] [(all-fields f-id) ostr]))
+                                      (mapv (fn [[^Field fld ostr]] (str (.-name fld) ostr)))
+                                      comma-separated)])
           (when limit    [" LIMIT " (str (int limit))])])
        (conj {} wh-params)
        f-ids

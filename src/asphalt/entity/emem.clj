@@ -134,6 +134,18 @@
     (conjv all-rows new-row)))
 
 
+(defn as-order-field
+  [^Entity entity order]
+  (i/expected et/entity? "an entity" entity)
+  (if (vector? order)
+    (let [fields (.-fields entity)]
+      (i/expected #(i/count= 2 %) "vector of two elements [field-id :asc|:desc]" order)
+      (i/expected fields          "first element of order to be a field-ID" (first order))
+      (i/expected #{:asc :desc}   "second element of order to be :asc or :desc" (second order))
+      (update order 1 #(if (= :asc %) < >)))
+    (as-order-field entity [order :asc])))
+
+
 (extend-protocol et/IRepo
   clojure.lang.IAtom
   (r-genkey [this entity row]  (let [row (ensure-fields entity row)
@@ -185,20 +197,27 @@
                                             (format "Expected key %s in params" id))))))
   (r-query  [this entity opts] (let [{:keys [fields
                                              where
-                                             order-by
+                                             order
                                              limit]} opts
                                      | (fn [param f & more]
                                          (if param
                                            (apply f more)
                                            (last more)))
-                                     default (default-vals entity)]
+                                     default (default-vals entity)
+                                     o-pairs (mapv #(as-order-field entity %) order)]
                                  (i/expected et/entity? "an entity" entity)
                                  (->> (get @this (.-id ^Entity entity))
                                    (map #(merge default %))
-                                   (| where    filter #(where? where %))
-                                   (| order-by sort-by (fn [row] (mapv row order-by)))
-                                   (| limit    take limit)
-                                   (| fields   map #(select-keys % fields))
+                                   (| where  filter #(where? where %))
+                                   (| order  sort-by (fn [row]
+                                                       (->> o-pairs
+                                                         (map first)
+                                                         (mapv row))) (fn [vs1 vs2]
+                                                                        (->> o-pairs
+                                                                          (map #((second %3) %1 %2) vs1 vs2)
+                                                                          (reduce #(and %1 %2) true))))
+                                   (| limit  take limit)
+                                   (| fields map #(select-keys % fields))
                                    vec)))
   (r-count  [this entity opts] (let [{:keys [where]} opts
                                      | (fn [param f & more]

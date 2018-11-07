@@ -148,6 +148,13 @@
   (apply f args))
 
 
+(defn count=
+  [n-or-xs xs & more]
+  (apply = (if (integer? n-or-xs) n-or-xs (count n-or-xs))
+    (count xs)
+    (map count more)))
+
+
 ;; ----- type definitions -----
 
 
