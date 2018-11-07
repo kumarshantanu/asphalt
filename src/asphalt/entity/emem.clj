@@ -134,6 +134,9 @@
     (conjv all-rows new-row)))
 
 
+(defn any< [x y] (neg? (compare x y)))
+(defn any> [x y] (pos? (compare x y)))
+
 (defn as-order-field
   [^Entity entity order]
   (i/expected et/entity? "an entity" entity)
@@ -142,7 +145,7 @@
       (i/expected #(i/count= 2 %) "vector of two elements [field-id :asc|:desc]" order)
       (i/expected fields          "first element of order to be a field-ID" (first order))
       (i/expected #{:asc :desc}   "second element of order to be :asc or :desc" (second order))
-      (update order 1 #(if (= :asc %) < >)))
+      (update order 1 #(if (= :asc %) any< any>)))
     (as-order-field entity [order :asc])))
 
 

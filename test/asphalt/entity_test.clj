@@ -123,6 +123,11 @@
             (e/query-entities mem-repo employee  {:fields [:id :name :salary]})
             (e/query-entities u/orig-ds employee {:fields [:id :name :salary]}))
         "select fields")
+      (is (= [(merge emp1 xtra)
+              (merge emp2 xtra)
+              (merge emp3 xtra)]
+            (e/query-entities mem-repo employee  {:order [:salary :name]})
+            (e/query-entities u/orig-ds employee {:order [:salary :name]})))
       (is (= [(merge emp3 xtra)
               (merge emp2 xtra)
               (merge emp1 xtra)]
