@@ -127,13 +127,20 @@
               (merge emp2 xtra)
               (merge emp3 xtra)]
             (e/query-entities mem-repo employee  {:order [:salary :name]})
-            (e/query-entities u/orig-ds employee {:order [:salary :name]})))
+            (e/query-entities u/orig-ds employee {:order [:salary :name]}))
+        "ORDER BY - simple fields (implied ASCending)")
       (is (= [(merge emp3 xtra)
               (merge emp2 xtra)
               (merge emp1 xtra)]
             (e/query-entities mem-repo employee  {:order [[:id :desc]]})
             (e/query-entities u/orig-ds employee {:order [[:id :desc]]}))
-        "ORDER BY - one field")
+        "ORDER BY - explicit DESCending")
+      (is (= [(merge emp3 xtra)
+              (merge emp2 xtra)
+              (merge emp1 xtra)]
+            (e/query-entities mem-repo employee  {:order [[:salary :desc] :name]})
+            (e/query-entities u/orig-ds employee {:order [[:salary :desc] :name]}))
+        "ORDER BY - simple fields (explicit DESCending and implied ASCending)")
 ;      (is false "ORDER BY - two fields, ASC and DESC")
 ;      (is false "LIMIT")
 ;      (is false "OFFSET")

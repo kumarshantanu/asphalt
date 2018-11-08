@@ -134,108 +134,158 @@
     (conjv all-rows new-row)))
 
 
-(defn any< [x y] (neg? (compare x y)))
-(defn any> [x y] (pos? (compare x y)))
-
 (defn as-order-field
   [^Entity entity order]
   (i/expected et/entity? "an entity" entity)
   (if (vector? order)
-    (let [fields (.-fields entity)]
+    (let [[f-id o-token] order
+          fields (.-fields entity)]
       (i/expected #(i/count= 2 %) "vector of two elements [field-id :asc|:desc]" order)
-      (i/expected fields          "first element of order to be a field-ID" (first order))
-      (i/expected #{:asc :desc}   "second element of order to be :asc or :desc" (second order))
-      (update order 1 #(if (= :asc %) any< any>)))
+      (i/expected fields          "first element of order to be a field-ID" f-id)
+      (i/expected #{:asc :desc}   "second element of order (order token) to be :asc or :desc" o-token)
+      [f-id (if (= :asc o-token) #(compare %1 %2) #(compare %2 %1))])
     (as-order-field entity [order :asc])))
+
+
+;; ===== atom store implementation =====
+
+
+(defn atom-genkey
+  [the-atom ^Entity entity row]
+  (let [row (ensure-fields entity row)
+        [final-row gen] (row-with-generated-fields entity row)]
+    (swap! the-atom update (.-id entity)
+      conjv final-row)
+    gen))
+
+
+(defn atom-multgk
+  [the-atom ^Entity entity rows]
+  (let [gvec (transient [])
+        rows (mapv #(ensure-fields entity %) rows)]
+    (swap! the-atom update (.-id entity)
+      (comp vec concat)
+      (mapv #(let [[final-row gen] (row-with-generated-fields
+                                     entity %)]
+               (conj! gvec gen)
+               final-row) rows))
+    (persistent! gvec)))
+
+
+(defn atom-insert
+  [the-atom ^Entity entity row]
+  (let [row (ensure-fields entity row)
+        [final-row _] (row-with-generated-fields entity row)]
+    (swap! the-atom update (.-id entity)
+      conjv-row entity final-row)
+    1))
+
+
+(defn atom-multin
+  [the-atom ^Entity entity rows]
+  (let [gvec (transient [])
+        rows (mapv #(ensure-fields entity %) rows)]
+    (swap! the-atom update (.-id entity)
+      (comp vec concat)
+      (mapv #(first (row-with-generated-fields entity %)) rows))
+    (count rows)))
+
+
+(defn atom-update
+  [the-atom ^Entity entity subst opts]
+  (let [{:keys [where]} opts
+        n (volatile! 0)]
+    (swap! the-atom update (.-id entity)
+      (fn [rows]
+        (mapv #(if (where? where %)
+                 (do
+                   (vswap! n long-inc)
+                   (->> (vals %)
+                     (replace subst)
+                     (zipmap (keys %))))
+                 %) rows)))
+    @n))
+
+
+(defn atom-upsert
+  [the-atom ^Entity entity row]
+  (let [id (.-id entity)]
+    (if-let [idval (get row id)]
+      (if (zero? ^long (et/r-update the-atom entity row [:= id idval]))
+        (do
+          (et/r-insert the-atom entity row)
+          1)
+        2)
+      (throw (IllegalArgumentException.
+               (format "Expected key %s in params" id))))))
+
+
+(defn atom-query
+  [the-atom ^Entity entity opts]
+  (let [{:keys [fields
+                where
+                order
+                limit]} opts
+        | (fn [param f & more]
+            (if param
+              (apply f more)
+              (last more)))
+        default (default-vals entity)
+        o-pairs (mapv #(as-order-field entity %) order)]
+    (i/expected et/entity? "an entity" entity)
+    (->> (get @the-atom (.-id entity))
+      (map #(merge default %))
+      (| where  filter #(where? where %))
+      (| order  sort-by (fn [row]
+                          (->> o-pairs
+                            (map first)
+                            (mapv row))) (fn [vs1 vs2]
+                                           (->> o-pairs
+                                             (mapv #((second %3) %1 %2) vs1 vs2)
+                                             (reduce (fn [a x]
+                                                       (if (zero? x)
+                                                         0
+                                                         (reduced x)))
+                                               0))))
+      (| limit  take limit)
+      (| fields map #(select-keys % fields))
+      vec)))
+
+
+(defn atom-count
+  [the-atom ^Entity entity opts]
+  (let [{:keys [where]} opts
+        | (fn [param f & more]
+            (if param
+              (apply f more)
+              (last more)))
+        default (default-vals entity)]
+    (i/expected et/entity? "an entity" entity)
+    (->> (get @the-atom (.-id entity))
+      (map #(merge default %))
+      (| where    filter #(where? where %))
+      count)))
+
+
+(defn atom-delete
+  [the-atom ^Entity entity opts]
+  (let [{:keys [where]} opts]
+    (swap! the-atom update (.-id entity)
+      (fn [rows]
+        (->> rows
+          (remove #(where? where %))
+          vec)))))
 
 
 (extend-protocol et/IRepo
   clojure.lang.IAtom
-  (r-genkey [this entity row]  (let [row (ensure-fields entity row)
-                                     [final-row gen] (row-with-generated-fields entity row)]
-                                 (swap! this update (.-id ^Entity entity)
-                                   conjv final-row)
-                                 gen))
-  (r-multgk [this entity rows] (let [gvec (transient [])
-                                     rows (mapv #(ensure-fields entity %) rows)]
-                                 (swap! this update (.-id ^Entity entity)
-                                   (comp vec concat)
-                                   (mapv #(let [[final-row gen] (row-with-generated-fields
-                                                                  entity %)]
-                                            (conj! gvec gen)
-                                            final-row) rows))
-                                 (persistent! gvec)))
-  (r-insert [this entity row]  (let [row (ensure-fields entity row)
-                                     [final-row _] (row-with-generated-fields entity row)]
-                                 (swap! this update (.-id ^Entity entity)
-                                   conjv-row entity final-row)
-                                 1))
-  (r-multin [this entity rows] (let [gvec (transient [])
-                                     rows (mapv #(ensure-fields entity %) rows)]
-                                 (swap! this update (.-id ^Entity  entity)
-                                   (comp vec concat)
-                                   (mapv #(first (row-with-generated-fields entity %)) rows))
-                                 (count rows)))
+  (r-genkey [this entity row]  (atom-genkey this entity row))
+  (r-multgk [this entity rows] (atom-multgk this entity rows))
+  (r-insert [this entity row]  (atom-insert this entity row))
+  (r-multin [this entity rows] (atom-multin this entity rows))
   (r-update [this entity
-             subst opts]       (let [{:keys [where]} opts
-                                     n (volatile! 0)]
-                                 (swap! this update (.-id ^Entity entity)
-                                   (fn [rows]
-                                     (mapv #(if (where? where %)
-                                              (do
-                                                (vswap! n long-inc)
-                                                (->> (vals %)
-                                                  (replace subst)
-                                                  (zipmap (keys %))))
-                                              %) rows)))
-                                 @n))
-  (r-upsert [this entity row]  (let [id (.-id ^Entity entity)]
-                                 (if-let [idval (get row id)]
-                                   (if (zero? ^long (et/r-update this entity row [:= id idval]))
-                                     (do
-                                       (et/r-insert this entity row)
-                                       1)
-                                     2)
-                                   (throw (IllegalArgumentException.
-                                            (format "Expected key %s in params" id))))))
-  (r-query  [this entity opts] (let [{:keys [fields
-                                             where
-                                             order
-                                             limit]} opts
-                                     | (fn [param f & more]
-                                         (if param
-                                           (apply f more)
-                                           (last more)))
-                                     default (default-vals entity)
-                                     o-pairs (mapv #(as-order-field entity %) order)]
-                                 (i/expected et/entity? "an entity" entity)
-                                 (->> (get @this (.-id ^Entity entity))
-                                   (map #(merge default %))
-                                   (| where  filter #(where? where %))
-                                   (| order  sort-by (fn [row]
-                                                       (->> o-pairs
-                                                         (map first)
-                                                         (mapv row))) (fn [vs1 vs2]
-                                                                        (->> o-pairs
-                                                                          (map #((second %3) %1 %2) vs1 vs2)
-                                                                          (reduce #(and %1 %2) true))))
-                                   (| limit  take limit)
-                                   (| fields map #(select-keys % fields))
-                                   vec)))
-  (r-count  [this entity opts] (let [{:keys [where]} opts
-                                     | (fn [param f & more]
-                                         (if param
-                                           (apply f more)
-                                           (last more)))
-                                     default (default-vals entity)]
-                                 (i/expected et/entity? "an entity" entity)
-                                 (->> (get @this (.-id ^Entity entity))
-                                   (map #(merge default %))
-                                   (| where    filter #(where? where %))
-                                   count)))
-  (r-delete [this entity opts] (let [{:keys [where]} opts]
-                                 (swap! this update (.-id ^Entity entity)
-                                   (fn [rows]
-                                     (->> rows
-                                       (remove #(where? where %))
-                                       vec))))))
+             subst opts]       (atom-update this entity subst opts))
+  (r-upsert [this entity row]  (atom-upsert this entity row))
+  (r-query  [this entity opts] (atom-query  this entity opts))
+  (r-count  [this entity opts] (atom-count  this entity opts))
+  (r-delete [this entity opts] (atom-delete this entity opts)))
