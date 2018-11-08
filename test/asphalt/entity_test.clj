@@ -91,19 +91,10 @@
 
 (deftest test-entity-query
   (testing "happy"
-    (let [emp1 {:id 10
-                :name "Munna Marwah"
-                :salary 1000}
-          emp2 {:id 15
-               :name "Naresh Nishchal"
-               :salary 2000}
-          emp3 {:id 20
-               :name "Pappu Puniya"
-               :salary 3000}
-          xtra {:doj nil
-                :dept nil
-                :bio nil
-                :pic nil}]
+    (let [emp1 {:id 10 :name "Munna Marwah"    :salary 1000}
+          emp2 {:id 15 :name "Naresh Nishchal" :salary 2000}
+          emp3 {:id 20 :name "Pappu Puniya"    :salary 3000}
+          xtra (zipmap [:doj :dept :bio :pic] (repeat nil))]
       (doseq [each [emp1 emp2 emp3]]
         (is (= 1
               (e/create-entity mem-repo employee each)
@@ -141,7 +132,5 @@
             (e/query-entities mem-repo employee  {:order [[:salary :desc] :name]})
             (e/query-entities u/orig-ds employee {:order [[:salary :desc] :name]}))
         "ORDER BY - simple fields (explicit DESCending and implied ASCending)")
-;      (is false "ORDER BY - two fields, ASC and DESC")
-;      (is false "LIMIT")
-;      (is false "OFFSET")
-      )))
+      (is false "LIMIT")
+      (is false "OFFSET"))))
