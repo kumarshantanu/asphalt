@@ -77,16 +77,20 @@
             (e/count-entities u/orig-ds employee)) "row count should match"))))
 
 
-(deftest test-entity-genkey)
+(deftest test-entity-genkey
+  (is false "genkey"))
 
 
-(deftest test-entity-update)
+(deftest test-entity-update
+  (is false "update"))
 
 
-(deftest test-entity-upsert)
+(deftest test-entity-upsert
+  (is false "upsert"))
 
 
-(deftest test-entity-delete)
+(deftest test-entity-delete
+  (is false "delete"))
 
 
 (deftest test-entity-query
@@ -136,7 +140,7 @@
       (is false "OFFSET"))))
 
 
-(deftest entity-count
+(deftest test-entity-count
   (testing "happy"
     (let [emp1 {:id 10 :name "Munna Marwah"    :salary 1000}
           emp2 {:id 15 :name "Naresh Nishchal" :salary 2000}
