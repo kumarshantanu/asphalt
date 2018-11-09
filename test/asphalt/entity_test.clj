@@ -134,3 +134,29 @@
         "ORDER BY - simple fields (explicit DESCending and implied ASCending)")
       (is false "LIMIT")
       (is false "OFFSET"))))
+
+
+(deftest entity-count
+  (testing "happy"
+    (let [emp1 {:id 10 :name "Munna Marwah"    :salary 1000}
+          emp2 {:id 15 :name "Naresh Nishchal" :salary 2000}
+          emp3 {:id 20 :name "Pappu Puniya"    :salary 3000}
+          xtra (zipmap [:doj :dept :bio :pic] (repeat nil))]
+      (doseq [each [emp1 emp2 emp3]]
+        (is (= 1
+              (e/create-entity mem-repo employee each)
+              (e/create-entity u/orig-ds employee each))))
+      (is (= 3
+            (e/count-entities mem-repo employee)
+            (e/count-entities u/orig-ds employee)))
+      (is (= 2
+            (e/count-entities mem-repo  employee {:where [:>= :salary 2000]})
+            (e/count-entities u/orig-ds employee {:where [:>= :salary 2000]})))
+      (is (= 1
+            (e/count-entities mem-repo  employee {:where [:and [:>= :salary 2000] [:like :name "Pappu%"]]})
+            (e/count-entities u/orig-ds employee {:where [:and [:>= :salary 2000] [:like :name "Pappu%"]]}))
+        "LIKE clause - forward")
+      (is (= 1
+            (e/count-entities mem-repo  employee {:where [:and [:>= :salary 2000] [:like :name "%appu%"]]})
+            (e/count-entities u/orig-ds employee {:where [:and [:>= :salary 2000] [:like :name "%appu%"]]}))
+        "LIKE clause - backward and forward"))))

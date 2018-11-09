@@ -10,6 +10,7 @@
 (ns asphalt.entity.emem
   "In-memory entity store implementation. For internal use only - subject to change."
   (:require
+    [clojure.string      :as string]
     [asphalt.internal    :as i]
     [asphalt.entity.type :as et])
   (:import
@@ -59,6 +60,15 @@
                  (throw (IllegalArgumentException.
                           (str "ExpectedIN operator to have only two arguments, found "
                             (count args) ": " where-expression))))
+          :like (do
+                  (i/expected #(i/count= 2 %) "LIKE operator to have two arguments" args)
+                  (operate (fn [^String string-token ^String like-pattern]
+                             (-> like-pattern
+                               (string/replace #"\%" ".*")
+                               re-pattern
+                               (re-find string-token)
+                               boolean))
+                    m args))
           (throw (UnsupportedOperationException. (str "Unsupported condition operator: "
                                                    oper " in " (pr-str where-expression))))))
       true)))
@@ -242,7 +252,7 @@
                             (mapv row))) (fn [vs1 vs2]
                                            (->> o-pairs
                                              (mapv #((second %3) %1 %2) vs1 vs2)
-                                             (reduce (fn [a x]
+                                             (reduce (fn [a ^long x]
                                                        (if (zero? x)
                                                          0
                                                          (reduced x)))

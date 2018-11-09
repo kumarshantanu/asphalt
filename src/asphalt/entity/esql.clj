@@ -136,6 +136,10 @@
                                         [[(.-name kf) " BETWEEN " [k1 (.-type kf)] " AND " [k2 (.-type kf)]]
                                          {k1 p2 k2 p2}])))
                  (i/expected "three arguments for BETWEEN operator" args))
+      :like (let [[^Field f] (fcheck (first args))
+                  pkey (keyword (gensym))]
+              (i/expected #(i/count= 2 %) "two arguments for the LIKE clause" args)
+              [[" " (.-name f) " LIKE " [pkey :string]] {pkey (second args)}])
       (throw (UnsupportedOperationException. (str "Unsupported condition operator: "
                                                oper " in " (pr-str where-expr)))))))
 
