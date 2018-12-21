@@ -78,7 +78,19 @@
 
 
 (deftest test-entity-genkey
-  (is false "genkey"))
+  (let [emp1 {;;:id 10
+              :name "Munna Marwah"
+              :salary 1000}
+        emp2 {:name "Naresh Nishchal"
+              :salary 2000}]
+    (is (= 1
+            (e/genkey-entity mem-repo employee emp1)
+            (e/genkey-entity u/orig-ds employee emp1)))
+    (is (= 2
+            (e/genkey-entity mem-repo employee emp2)
+            (e/genkey-entity u/orig-ds employee emp2)))
+    )
+  )
 
 
 (deftest test-entity-update

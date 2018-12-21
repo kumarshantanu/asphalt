@@ -144,11 +144,6 @@
                                                oper " in " (pr-str where-expr)))))))
 
 
-#_(def where-template (memoize
-                        (fn [^Entity entity expr param-keys]
-                          (as-where-template [] entity expr param-keys))))
-
-
 (def field-idset (memoize (fn [^Entity entity]
                             (->> (.-fields entity)
                               keys
@@ -237,7 +232,8 @@
        (conj {} wh-params)])))
 
 
-(defn sql-genkey [conn-source entity row]        "Insert entity, returning generated keys")
+(defn sql-genkey [conn-source entity row]        (let [template (insert-template entity (set (keys row)))]
+                                                   (a/genkey conn-source template row)))
 (defn sql-multgk [conn-source entity rows]       "Insert multiple entities, returning generated keys")
 (defn sql-insert [conn-source entity row]        (let [template (insert-template entity (set (keys row)))]
                                                    (a/update conn-source template row)))
@@ -258,7 +254,7 @@
 
 (extend-protocol et/IRepo
   java.sql.Connection
-  (r-genkey [this entity row]        "Insert entity, returning generated keys")
+  (r-genkey [this entity row]        (sql-genkey this entity row))
   (r-multgk [this entity rows]       "Insert multiple entities, returning generated keys")
   (r-insert [this entity row]        (sql-insert this entity row))
   (r-multin [this entity rows]       "Insert multiple entities")
@@ -268,7 +264,7 @@
   (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   javax.sql.DataSource
-  (r-genkey [this entity row]        "Insert entity, returning generated keys")
+  (r-genkey [this entity row]        (sql-genkey this entity row))
   (r-multgk [this entity rows]       "Insert multiple entities, returning generated keys")
   (r-insert [this entity row]        (sql-insert this entity row))
   (r-multin [this entity rows]       "Insert multiple entities")
@@ -278,7 +274,7 @@
   (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   java.util.Map
-  (r-genkey [this entity row]        "Insert entity, returning generated keys")
+  (r-genkey [this entity row]        (sql-genkey this entity row))
   (r-multgk [this entity rows]       "Insert multiple entities, returning generated keys")
   (r-insert [this entity row]        (sql-insert this entity row))
   (r-multin [this entity rows]       "Insert multiple entities")
@@ -288,7 +284,7 @@
   (r-count  [this entity opts]       (sql-count this entity opts))
   (r-delete [this entity opts]       "Delete entities")
   TxnConnectionSource
-  (r-genkey [this entity row]        "Insert entity, returning generated keys")
+  (r-genkey [this entity row]        (sql-genkey this entity row))
   (r-multgk [this entity rows]       "Insert multiple entities, returning generated keys")
   (r-insert [this entity row]        (sql-insert this entity row))
   (r-multin [this entity rows]       "Insert multiple entities")

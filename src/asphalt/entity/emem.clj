@@ -78,12 +78,12 @@
   [entity row]
   (if-let [gfields (->> (.-fields ^Entity entity)
                      vals
-                     (filter :generator)
+                     (filter #(.-counter ^Field %))
                      (remove #(contains? row (:id %)) )
                      seq)]
     (let [generated (transient {})
-          final-row (reduce (fn [r ^Field f] (let [gval @(:generator f)]
-                                               (assoc! generated (:name f) gval)
+          final-row (reduce (fn [r ^Field f] (let [gval @(.-counter f)]
+                                               (assoc! generated (.-name f) gval)
                                                (assoc r (.-id f) gval)))
                       row gfields)]
       [final-row (persistent! generated)])
@@ -166,7 +166,8 @@
         [final-row gen] (row-with-generated-fields entity row)]
     (swap! the-atom update (.-id entity)
       conjv final-row)
-    gen))
+    ;; extract 10 from {:id 10}
+    (first (nfirst gen))))
 
 
 (defn atom-multgk
