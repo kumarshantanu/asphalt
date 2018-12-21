@@ -17,7 +17,7 @@
              :c07 {:dependencies [[org.clojure/clojure "1.7.0"]]}
              :c08 {:dependencies [[org.clojure/clojure "1.8.0"]]}
              :c09 {:dependencies [[org.clojure/clojure "1.9.0"]]}
-             :c10 {:dependencies [[org.clojure/clojure "1.10.0-beta5"]]}
+             :c10 {:dependencies [[org.clojure/clojure "1.10.0"]]}
              :dln {:jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
              :perf {:dependencies [[citius "0.2.4"]
                                    [org.clojure/java.jdbc "0.7.1"]]
@@ -27,3 +27,4 @@
              :c3p0  {:test-paths ["test-connpool/c3p0"]  :dependencies [[com.mchange/c3p0 "0.9.5.2"]]}
              :bone  {:test-paths ["test-connpool/bone"]  :dependencies [[com.jolbox/bonecp "0.8.0.RELEASE"]]}}
   :jvm-opts ^:replace ["-server" "-Xms2048m" "-Xmx2048m" #_FIXME "-Duser.timezone=UTC"])
+
